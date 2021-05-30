@@ -10,5 +10,5 @@ clean:
 	rm test
 
 test: 
-	$(CC) $(CFLAGS) test.cc /usr/local/lib/libredis++.a /usr/local/lib/libhiredis.a $(pkg-config fuse3 --cflags --libs)
+	$(CC) $(CFLAGS) test.cc /usr/local/lib/libredis++.a /usr/local/lib/libhiredis.a $(pkg-config fuse3 --cflags --libs) -lfuse3
 	

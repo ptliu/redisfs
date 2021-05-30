@@ -15,6 +15,7 @@
 
 #define BLOCK_SIZE 512000000
 
+
 using namespace sw::redis;
 using json = nlohmann::json;
 
@@ -31,6 +32,29 @@ static struct redis_fs_info {
   
 } redis_fs_info;
 
+inline size_t calc_offset_idx(off_t offset){
+  if(offset < 0){
+    return 0;
+  }
+  return offset / BLOCK_SIZE;
+}
+
+inline std::vector<size_t> file_blocks(std::vector<size_t>& blocklist, off_t offset, size_t size){
+  std::vector<size_t> blocks;
+  if(offset < 0){
+    return blocks;
+  }
+
+  size_t end = (size_t)offset + size;
+  for(size_t i = (size_t)offset; i < end; i += BLOCK_SIZE){
+    size_t idx = calc_offset_idx(offset);
+    if(idx < blocklist.size()){
+      blocks.push_back(blocklist[i]);
+    
+    }
+  }
+  return blocks;
+}
 
 //required fuse functions
 
@@ -105,7 +129,7 @@ static int test_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
 static int test_open(const char *path, struct fuse_file_info *fi)
 {
-
+  int res = 0;
   std::string filename(path);
   Optional<std::string> val = redis_fs_info.cluster->get(filename);
   if(val){
@@ -113,10 +137,8 @@ static int test_open(const char *path, struct fuse_file_info *fi)
   } else {
     res = -ENOENT;
   }
-  if ((fi->flags & O_ACCMODE) != O_RDONLY)
-    return -EACCES;
 
-  return 0;
+  return res;
 }
 
 static int test_read(const char *path, char *buf, size_t size, off_t offset,
@@ -124,22 +146,63 @@ static int test_read(const char *path, char *buf, size_t size, off_t offset,
 {
   size_t len;
   (void) fi;
-  if(strcmp(path+1, options.filename) != 0)
-    return -ENOENT;
+  int bytes = 0;
+  std::string filename(path);
+  Optional<std::string> val = redis_fs_info.cluster->get(filename);
 
-  len = strlen(options.contents);
-  if (offset < len) {
-    if (offset + size > len)
-      size = len - offset;
-    memcpy(buf, options.contents + offset, size);
-  } else
-    size = 0;
-
-  return size;
+  if(val){
+    json file_attr = json::parse(*val);  
+    if(!file_attr.contains("blocks")){
+      return bytes; //no blocks to read
+    }
+    std::vector<size_t> blocklist = file_attr["blocks"].get<std::vector<size_t>>();
+    std::vector<size_t> blocks = file_blocks(blocklist, offset, size);
+    for(auto it = blocks.begin(); it != blocks.end(); it++){
+      Optional<std::string> block = redis_fs_info.cluster->get(std::to_string(*it));
+      if(block){
+        
+        memcpy(buf + bytes, (*block).c_str(), (*block).size());
+        bytes += (*block).size();
+        
+      } else {
+        //this is weird but i guess we do nothing
+      }
+    }
+  } else {
+    bytes = -ENOENT;
+  }
+  return bytes;
 }
 
 static int test_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi){
-  return 0; //TODO 
+
+  int bytes = 0;
+  std::string filename(path);
+  Optional<std::string> val = redis_fs_info.cluster->get(filename);
+  if(val){
+    json file_attr = json::parse(*val); 
+    if(!file_attr.contains("blocks")){
+      //create empty list of blocks
+      file_attr["blocks"] = {};
+    }
+    std::vector<size_t> blocklist = file_attr["blocks"].get<std::vector<size_t>>();
+    std::vector<size_t> blocks = file_blocks(blocklist, offset, size);
+    for(auto it = blocks.begin(); it != blocks.end(); it++){
+      Optional<std::string> block = redis_fs_info.cluster->get(std::to_string(*it));
+      if(block){
+        
+        //memcpy(buf + bytes, (*block).c_str(), (*block).size());
+        bytes += (*block).size();
+        
+      } else {
+        //this is weird but i guess we do nothing
+      }
+    }
+  } else {
+    bytes = -ENOENT;
+  }
+ 
+  return bytes; //TODO 
 }
 
 
@@ -158,13 +221,9 @@ int main(int argc, char * argv[]){
   connection_options.host = "127.0.0.1";  // Required.
   connection_options.port = 7000; // Optional. The default port is 6379.
   RedisCluster cluster1(connection_options);
-  //cluster1.set("k1", "v1");
-  auto v = cluster1.get("k1");
-  if(v){
-    std::cout << *v << std::endl;
-  }
-  else {
-    std::cout << "Got null" << std::endl;
-  }
 
+  int ret;
+
+  ret = fuse_main(argc, argv, &test_oper, NULL);
+  return ret;
 }
