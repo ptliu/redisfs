@@ -235,6 +235,17 @@ static int test_write(const char *path, const char *buf, size_t size, off_t offs
       }
       list_idx++;
     }
+      //append to file
+    for(;(size_t)bytes <= size;){
+      size_t block_len = std::min(size - bytes, (size_t)BLOCK_SIZE); //TODO
+      std::string new_block = std::string(buf + bytes, block_len);
+      size_t block_hash = std::hash<std::string>{}(new_block);
+      //put block back in block store
+      redis_fs_info.cluster->set(std::to_string(block_hash), new_block);
+      blocklist.push_back(block_hash);
+
+      bytes += block_len;
+    }
     file_attr["blocks"] = blocklist;
     redis_fs_info.cluster->set(filename, file_attr.dump());
   } else {
