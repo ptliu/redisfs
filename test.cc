@@ -256,11 +256,16 @@ static int test_write(const char *path, const char *buf, size_t size, off_t offs
 }
 
 
+int test_release (const char * path, struct fuse_file_info * fi){
+  return 0; //nothing needs to be done
+}
+
 static const struct fuse_operations test_oper {
   .getattr = test_getattr,
   .open = test_open,
   .read = test_read,
   .write = test_write,
+  .release = test_release,
   .readdir = test_readdir,
   .init = test_init,
 };
