@@ -1,14 +1,20 @@
-CC=g++
-CFLAGS=-std=c++17 -Wall -ggdb -o test -D_FILE_OFFSET_BITS=64 -pthread 
-OBJ = test 
+BUILD_DIR=./build
 
-all: targets
+.PHONY: all configure build clean cleanall init
 
-targets: test
+all: configure build
+
+configure:
+	cmake -B "${BUILD_DIR}" -S . -DCMAKE_TOOLCHAIN_FILE="./vcpkg/scripts/buildsystems/vcpkg.cmake"
+
+build:
+	cmake --build "${BUILD_DIR}"
 
 clean: 
-	rm test
+	cmake --build "${BUILD_DIR}" --target clean
 
-test: 
-	$(CC) $(CFLAGS) test.cc /usr/local/lib/libredis++.a /usr/local/lib/libhiredis.a $(pkg-config fuse3 --cflags --libs) -lfuse3
-	
+cleanall:
+	rm -rf "${BUILD_DIR}"
+
+init:
+	./vcpkg/bootstrap-vcpkg.sh

@@ -33,7 +33,6 @@ find_library (FUSE3_LIBRARY
         NAMES fuse3
         HINTS ${PC_FUSE3_LIBDIR} ${PC_FUSE3_LIBRARY_DIRS}
         )
-message (STATUS "Using ${FUSE3_LIBRARY} as FUSE3 library file.")
 
 IF (PC_FUSE3_FOUND)
         set (FUSE3_VERSION_STRING "${PC_FUSE3_VERSION}")

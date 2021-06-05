@@ -1,0 +1,16 @@
+{
+    "name": "redisfs",
+    "version-semver": "1.0.0",
+    "description": "A FUSE3-based filesystem that uses Redis for storage.",
+    "dependencies": [
+        "hiredis",
+        {
+            "name": "redis-plus-plus",
+            "features": [
+                "cxx17"
+            ]
+        },
+        "nlohmann-json"
+    ],
+    "builtin-baseline": "751fc199af8d33eb300af5edbd9e3b77c48f0bca"
+}
