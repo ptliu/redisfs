@@ -6,6 +6,8 @@ vcpkg_from_github(
     HEAD_REF master
     PATCHES
         fix-conversion.patch
+        find-args.patch
+        require-hiredis.patch
 )
 
 if("cxx17" IN_LIST FEATURES)

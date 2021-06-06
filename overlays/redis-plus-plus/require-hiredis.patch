@@ -1,0 +1,13 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index da99277..007570e 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -81,7 +81,7 @@ else()
+ endif()
+
+ # hiredis dependency
+-find_package(hiredis QUIET)
++find_package(hiredis REQUIRED)
+ if(hiredis_FOUND)
+     list(APPEND REDIS_PLUS_PLUS_HIREDIS_LIBS hiredis::hiredis)
+

@@ -1,0 +1,15 @@
+diff --git a/cmake/redis++-config.cmake.in b/cmake/redis++-config.cmake.in
+index 242f473..4b6b902 100644
+--- a/cmake/redis++-config.cmake.in
++++ b/cmake/redis++-config.cmake.in
+@@ -1,5 +1,9 @@
+ @PACKAGE_INIT@
+
++include(FindPackageHandleStandardArgs)
++set(${CMAKE_FIND_PACKAGE_NAME}_CONFIG "${CMAKE_CURRENT_LIST_FILE}")
++find_package_handle_standard_args(@PROJECT_NAME@ CONFIG_MODE)
++
+ include(CMakeFindDependencyMacro)
+
+ string(REPLACE "," ";" REDIS_PLUS_PLUS_DEPENDS_LIST @REDIS_PLUS_PLUS_DEPENDS@)
+ 
