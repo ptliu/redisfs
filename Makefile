@@ -6,7 +6,7 @@ VCPKG_DIR=./vcpkg_files
 all: configure build
 
 configure:
-	cmake -B "${BUILD_DIR}" -S . -DCMAKE_TOOLCHAIN_FILE="${VCPKG_DIR}/scripts/buildsystems/vcpkg.cmake"
+	cmake -B "${BUILD_DIR}" -S .
 
 build:
 	cmake --build "${BUILD_DIR}"

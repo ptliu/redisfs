@@ -3,7 +3,6 @@
     "version-semver": "1.0.0",
     "description": "A FUSE3-based filesystem that uses Redis for storage.",
     "dependencies": [
-        "hiredis",
         {
             "name": "redis-plus-plus",
             "features": [
