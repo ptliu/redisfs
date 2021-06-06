@@ -1,11 +1,12 @@
 BUILD_DIR=./build
+VCPKG_DIR=./vcpkg_files
 
 .PHONY: all configure build clean cleanall init
 
 all: configure build
 
 configure:
-	cmake -B "${BUILD_DIR}" -S . -DCMAKE_TOOLCHAIN_FILE="./vcpkg/scripts/buildsystems/vcpkg.cmake"
+	cmake -B "${BUILD_DIR}" -S . -DCMAKE_TOOLCHAIN_FILE="${VCPKG_DIR}/scripts/buildsystems/vcpkg.cmake"
 
 build:
 	cmake --build "${BUILD_DIR}"
@@ -17,4 +18,6 @@ cleanall:
 	rm -rf "${BUILD_DIR}"
 
 init:
-	./vcpkg/bootstrap-vcpkg.sh
+	git submodule update --init --recursive
+	${VCPKG_DIR}/bootstrap-vcpkg.sh
+	ln --symbolic --force -T "${VCPKG_DIR}/vcpkg" "./vcpkg"
