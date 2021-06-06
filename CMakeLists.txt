@@ -24,7 +24,3 @@ target_link_libraries(redisfs PRIVATE redis++::redis++_static)
 # <------------ add fuse3 dependency -------------->
 find_package(FUSE3 REQUIRED)
 target_link_libraries(redisfs PRIVATE FUSE3::FUSE3)
-
-# <------------ add json dependency -------------->
-find_package(nlohmann_json CONFIG REQUIRED)
-target_link_libraries(redisfs PRIVATE nlohmann_json::nlohmann_json)

@@ -10,12 +10,12 @@
 #include <sw/redis++/redis++.h>
 #include <sw/redis++/redis_cluster.h>
 #include <iostream>
-#include <nlohmann/json.hpp>
 
+#include "exceptions.h"
+#include "metadata.hpp"
 #include "utils.hpp"
 
 namespace redis = sw::redis;
-using json = nlohmann::json;
 
 namespace redisfs
 {
@@ -101,15 +101,15 @@ namespace redisfs
     int res = 0;
     std::string filename(path);
     redis::Optional<std::string> val = redis_fs_info.cluster->get(filename);
-    memset(stbuf, 0, sizeof(struct stat));
     if (val)
     {
-      json file_attr = json::parse(*val);
-      stbuf->st_mode = file_attr["st_mode"];
-      stbuf->st_nlink = file_attr["st_nlink"];
+      Metadata metadata;
+      deserialize( metadata, *val );
+      *stbuf = metadata.st;
     }
     else
     {
+      memset(stbuf, 0, sizeof(struct stat));
       if (strcmp(path, "/") == 0)
       {
         stbuf->st_mode = S_IFDIR | 0755;
@@ -134,7 +134,7 @@ namespace redisfs
     redis::Optional<std::string> val = redis_fs_info.cluster->get(filename);
     if (val)
     {
-      json file_attr = json::parse(*val);
+      // TODO ?
     }
     else
     {
@@ -149,18 +149,17 @@ namespace redisfs
     int res = 0;
     std::string filename(path);
     redis::Optional<std::string> val = redis_fs_info.cluster->get(filename);
-    if (val)
-    {
-      json file_attr = json::parse(*val);
-    }
-    else
+    if ( !val )
     {
       //create the file as it doesn't exist
-      json file_attr;
-      file_attr["blocks"] = {};
-      file_attr["st_mode"] = 0755;
-      file_attr["st_nlink"] = 1;
-      redis_fs_info.cluster->set(filename, file_attr.dump());
+      Metadata metadata;
+      metadata.st.st_mode = 0755;
+      metadata.st.st_nlink = 1;
+
+      std::string serialized;
+      serialize( metadata, serialized );
+
+      redis_fs_info.cluster->set( filename, serialized );
     }
 
     return res;
@@ -176,25 +175,26 @@ namespace redisfs
 
     if (val)
     {
-      json file_attr = json::parse(*val);
-      if (!file_attr.contains("blocks"))
+      Metadata metadata;
+      deserialize( metadata, *val );
+      if ( !metadata.blocks.empty() )
       {
         return bytes; //no blocks to read
       }
-      std::vector<size_t> blocklist = file_attr["blocks"].get<std::vector<size_t>>();
-      std::vector<size_t> blocks = file_blocks(blocklist, offset, size);
+
+      std::vector<size_t> blocks = file_blocks( metadata.blocks, offset, size );
       for (auto it = blocks.begin(); it != blocks.end(); it++)
       {
-        redis::Optional<std::string> block = redis_fs_info.cluster->get(std::to_string(*it));
+        const std::string blockID = std::to_string(*it);
+        redis::Optional<std::string> block = redis_fs_info.cluster->get( blockID );
         if (block)
         {
-
-          memcpy(buf + bytes, (*block).c_str(), (*block).size());
-          bytes += (*block).size();
+          memcpy(buf + bytes, block->c_str(), block->size());
+          bytes += block->size();
         }
         else
         {
-          //this is weird but i guess we do nothing
+          throw CorruptFilesystemError( "Block " + blockID + " is missing." );
         }
       }
     }
@@ -213,14 +213,9 @@ namespace redisfs
     redis::Optional<std::string> val = redis_fs_info.cluster->get(filename);
     if (val)
     {
-      json file_attr = json::parse(*val);
-      if (!file_attr.contains("blocks"))
-      {
-        //create empty list of blocks
-        file_attr["blocks"] = {};
-      }
-      std::vector<size_t> blocklist = file_attr["blocks"].get<std::vector<size_t>>();
-      std::vector<size_t> blocks = file_blocks(blocklist, offset, size);
+      Metadata metadata;
+      deserialize( metadata, *val );
+      std::vector<size_t> blocks = file_blocks(metadata.blocks, offset, size);
       size_t buffer_offset = 0;
       size_t list_idx = 0;
       for (auto it = blocks.begin(); it != blocks.end(); it++)
@@ -240,7 +235,7 @@ namespace redisfs
 
             //put block back in block store
             redis_fs_info.cluster->set(std::to_string(block_hash), modified_block);
-            blocklist[list_idx] = block_hash;
+            metadata.blocks[list_idx] = block_hash;
             bytes += block_len;
             if ((size_t)bytes >= size)
             { //bytes is always positive so this is ok
@@ -255,7 +250,7 @@ namespace redisfs
             size_t block_hash = std::hash<std::string>{}(modified_block);
             //put block back in block store
             redis_fs_info.cluster->set(std::to_string(block_hash), modified_block);
-            blocklist[list_idx] = block_hash;
+            metadata.blocks[list_idx] = block_hash;
             bytes += block_len;
             if ((size_t)bytes >= size)
             { //bytes is always positive so this is ok
@@ -278,12 +273,13 @@ namespace redisfs
         size_t block_hash = std::hash<std::string>{}(new_block);
         //put block back in block store
         redis_fs_info.cluster->set(std::to_string(block_hash), new_block);
-        blocklist.push_back(block_hash);
+        metadata.blocks.push_back(block_hash);
 
         bytes += block_len;
       }
-      file_attr["blocks"] = blocklist;
-      redis_fs_info.cluster->set(filename, file_attr.dump());
+      std::string serialized;
+      serialize( metadata, serialized );
+      redis_fs_info.cluster->set(filename, serialized);
     }
     else
     {

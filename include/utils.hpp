@@ -1,5 +1,8 @@
 #pragma once
 
+#include <string>
+#include <sys/stat.h>
+#include <arpa/inet.h>
 namespace redisfs {
 
     /**
@@ -22,5 +25,28 @@ namespace redisfs {
         static constexpr T TEBI = KIBI * GIBI;
 
     };
+
+    static const bool IS_BIG_ENDIAN = htonl( 1 ) == 1;
+
+    template<typename T>
+    inline void appendBytes( std::string & buf, const T val ) {
+
+        char * bytes = ( char * ) &val;
+        for ( size_t i = 0; i < sizeof( T ); i++ ) {
+            buf += bytes[IS_BIG_ENDIAN ? i : sizeof( T ) - 1 - i];
+        }
+
+    }
+
+    template<typename T>
+    inline size_t extractBytes( const std::string & buf, T & val, const size_t idx ) {
+
+        char * bytes = ( char * ) &val;
+        for ( size_t i = 0; i < sizeof( T ); i++ ) {
+            bytes[IS_BIG_ENDIAN ? i : sizeof( T ) - 1 - i] = buf[idx + i];
+        }
+        return idx + sizeof( T );
+
+    }
 
 }
