@@ -50,7 +50,7 @@ jobs:
           git config user.email github-actions@github.com
       - name: Commit result
         run: |
+          git switch binaries
           cp ./build/redisfs ./redisfs
-          git checkout binaries
           git add ./redisfs
           git commit -m "Compiled binary for commit ${{ steps.get_head.outputs.hash }}"
