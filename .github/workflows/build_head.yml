@@ -25,8 +25,9 @@ jobs:
       - name: Cache vcpkg
         id: cache_vcpkg
         uses: actions/cache@v2
-        path: ./vcpkg_files
-        key: ${{ runner.os }}-${{ steps.get_vcpkg.outputs.hash }}
+        with:
+          path: ./vcpkg_files
+          key: ${{ runner.os }}-${{ steps.get_vcpkg.outputs.hash }}
       - name: Initialize repository
         if: steps.cache_vcpkg.outputs.cache-hit != 'true'
         run: make init
