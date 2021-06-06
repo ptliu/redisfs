@@ -16,13 +16,13 @@
 #define BLOCK_SIZE 512000000
 
 
-using namespace sw::redis;
+namespace redis = sw::redis;
 using json = nlohmann::json;
 
 
 static struct redis_fs_info {
-  ConnectionOptions* options;
-  RedisCluster* cluster;
+  redis::ConnectionOptions* options;
+  redis::RedisCluster* cluster;
   
 } redis_fs_info;
 
@@ -56,10 +56,10 @@ static void *test_init(struct fuse_conn_info *conn, struct fuse_config *cfg){
   //TODO
   //(void) conn;
   //cfg->kernel_cache = 0;
-  static ConnectionOptions connection_options;
+  static redis::ConnectionOptions connection_options;
   connection_options.host = "127.0.0.1";  // Required.
   connection_options.port = 7000; // Optional. The default port is 6379.
-  static RedisCluster cluster1(connection_options);
+  static redis::RedisCluster cluster1(connection_options);
   
   redis_fs_info.options = &connection_options;
   redis_fs_info.cluster = &cluster1;
@@ -91,7 +91,7 @@ static int test_getattr(const char *path, struct stat *stbuf,
   (void) fi;
   int res = 0;
   std::string filename(path);
-  Optional<std::string> val = redis_fs_info.cluster->get(filename);
+  redis::Optional<std::string> val = redis_fs_info.cluster->get(filename);
   memset(stbuf, 0, sizeof(struct stat));
   if(val){
     json file_attr = json::parse(*val);
@@ -120,7 +120,7 @@ static int test_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
   int res = 0;
   std::string filename(path);
-  Optional<std::string> val = redis_fs_info.cluster->get(filename);
+  redis::Optional<std::string> val = redis_fs_info.cluster->get(filename);
   if(val){
     json file_attr = json::parse(*val);  
   } else {
@@ -134,7 +134,7 @@ static int test_open(const char *path, struct fuse_file_info *fi)
 {
   int res = 0;
   std::string filename(path);
-  Optional<std::string> val = redis_fs_info.cluster->get(filename);
+  redis::Optional<std::string> val = redis_fs_info.cluster->get(filename);
   if(val){
     json file_attr = json::parse(*val); 
   } else {
@@ -155,7 +155,7 @@ static int test_read(const char *path, char *buf, size_t size, off_t offset,
   (void) fi;
   int bytes = 0;
   std::string filename(path);
-  Optional<std::string> val = redis_fs_info.cluster->get(filename);
+  redis::Optional<std::string> val = redis_fs_info.cluster->get(filename);
 
   if(val){
     json file_attr = json::parse(*val);  
@@ -165,7 +165,7 @@ static int test_read(const char *path, char *buf, size_t size, off_t offset,
     std::vector<size_t> blocklist = file_attr["blocks"].get<std::vector<size_t>>();
     std::vector<size_t> blocks = file_blocks(blocklist, offset, size);
     for(auto it = blocks.begin(); it != blocks.end(); it++){
-      Optional<std::string> block = redis_fs_info.cluster->get(std::to_string(*it));
+      redis::Optional<std::string> block = redis_fs_info.cluster->get(std::to_string(*it));
       if(block){
         
         memcpy(buf + bytes, (*block).c_str(), (*block).size());
@@ -185,7 +185,7 @@ static int test_write(const char *path, const char *buf, size_t size, off_t offs
 
   int bytes = 0;
   std::string filename(path);
-  Optional<std::string> val = redis_fs_info.cluster->get(filename);
+  redis::Optional<std::string> val = redis_fs_info.cluster->get(filename);
   if(val){
     json file_attr = json::parse(*val); 
     if(!file_attr.contains("blocks")){
@@ -197,7 +197,7 @@ static int test_write(const char *path, const char *buf, size_t size, off_t offs
     size_t buffer_offset = 0;
     size_t list_idx = 0;
     for(auto it = blocks.begin(); it != blocks.end(); it++){
-      Optional<std::string> block = redis_fs_info.cluster->get(std::to_string(*it));
+      redis::Optional<std::string> block = redis_fs_info.cluster->get(std::to_string(*it));
       if(block){
         std::string block_string = std::string(*block);
         if(buffer_offset == 0){
@@ -273,10 +273,10 @@ static const struct fuse_operations test_oper {
 
 int main(int argc, char * argv[]){
 
-  ConnectionOptions connection_options;
+  redis::ConnectionOptions connection_options;
   connection_options.host = "127.0.0.1";  // Required.
   connection_options.port = 7000; // Optional. The default port is 6379.
-  RedisCluster cluster1(connection_options);
+  redis::RedisCluster cluster1(connection_options);
 
   int ret;
 
