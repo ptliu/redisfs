@@ -43,6 +43,29 @@ jobs:
           val="$( git rev-parse HEAD )"
           echo "::set-output name=hash::${val}"
 
+      # Save results
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: binaries
+          path: |
+            ./build/redisfs
+
+  commit:
+    name: Commit results
+    needs: build
+    runs-on: ubuntu-20.04
+    steps:
+      # Set up
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+        with:
+          ref: binaries # Release binaries branch
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: binaries
+
       # Commit results
       - name: Configure git commiter identity
         run: |
@@ -50,7 +73,12 @@ jobs:
           git config user.email github-actions@github.com
       - name: Commit result
         run: |
-          git switch binaries
-          cp ./build/redisfs ./redisfs
-          git add ./redisfs
-          git commit -m "Compiled binary for commit ${{ steps.get_head.outputs.hash }}"
+          git add ./build
+          git commit -m "Compiled binaries for commit ${{ steps.get_head.outputs.hash }}"
+
+      # Clean up
+      - name: Delete artifacts
+        if: always()
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: binaries
