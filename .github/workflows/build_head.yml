@@ -1,0 +1,52 @@
+name: Build Head
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: Build artifact
+    runs-on: ubuntu-20.04
+    steps:
+      # Set up
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+      - name: Install apt dependencies
+        run: sudo apt-get install -y g++ cmake fuse3 fuse3-dev pkg-config curl zip unzip tar
+      - name: Get vcpkg commit hash
+        id: get_vcpkg
+        run: |
+          val="$( git submodule status ./vcpkg_files | awk '{print $1}' )"
+          echo "::set-output name=hash::${val}"
+      - name: Cache vcpkg
+        id: cache_vcpkg
+        path: ./vcpkg_files
+        key: ${{ runner.os }}-${{ steps.get_vcpkg.outputs.hash }}
+      - name: Initialize repository
+        if: steps.cache_vcpkg.outputs.cache-hit != 'true'
+        run: make init
+
+      # Build
+      - name: Configure CMake
+        run: make configure
+      - name: Build project
+        run: make build
+      - name: Get current commit hash
+        id: get_head
+        run: |
+          val="$( git rev-parse HEAD )"
+          echo "::set-output name=hash::${val}"
+
+      # Commit results
+      - name: Configure git commiter identity
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+      - name: Commit result
+        run: |
+          cp ./build/redisfs ./redisfs
+          git checkout binaries
+          git add ./redisfs
+          git commit -m "Compiled binary for commit ${{ steps.get_head.outputs.hash }}"
