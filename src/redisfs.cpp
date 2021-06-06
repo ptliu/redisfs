@@ -10,15 +10,17 @@
 #include <sw/redis++/redis++.h>
 #include <sw/redis++/redis_cluster.h>
 #include <iostream>
-#include "nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 
-#define BLOCK_SIZE 512000000
+#include "utils.hpp"
 
 namespace redis = sw::redis;
 using json = nlohmann::json;
 
 namespace redisfs
 {
+
+  constexpr size_t BLOCK_SIZE = 512 * Size<size_t>::MEGA;
 
   static struct redis_fs_info
   {
