@@ -1,3 +1,5 @@
+BUILD_TYPE?=Release
+
 BUILD_DIR=./build
 VCPKG_DIR=./vcpkg_files
 
@@ -6,7 +8,7 @@ VCPKG_DIR=./vcpkg_files
 all: configure build
 
 configure:
-	cmake -B "${BUILD_DIR}" -S .
+	cmake -B "${BUILD_DIR}" -S . -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
 
 build:
 	cmake --build "${BUILD_DIR}"
