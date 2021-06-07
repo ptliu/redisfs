@@ -19,9 +19,7 @@ jobs:
           sudo apt-get install -y g++ cmake fuse3 libfuse3-dev pkg-config curl zip unzip tar
       - name: Get vcpkg commit hash
         id: get_vcpkg
-        run: |
-          val="$( git submodule status ./vcpkg_files | awk '{print $1}' )"
-          echo "::set-output name=hash::${val}"
+        run: echo "::set-output name=hash::$( git submodule status ./vcpkg_files | awk '{print $1}' )"
       - name: Cache vcpkg
         id: cache_vcpkg
         uses: actions/cache@v2
@@ -62,9 +60,7 @@ jobs:
           name: binaries
       - name: Get current commit hash
         id: get_head
-        run: |
-          val="$( git rev-parse HEAD )"
-          echo "::set-output name=hash::${val}"
+        run: echo "::set-output name=hash::$( git rev-parse HEAD )"
 
       # Commit results
       - name: Configure git commiter identity
@@ -73,8 +69,8 @@ jobs:
           git config user.email github-actions@github.com
       - name: Commit result
         run: |
-          git add *
-          git commit -m "Compiled binaries for commit ${{ steps.get_head.outputs.hash }}"
+          git add --all
+          git diff-index --quiet HEAD || git commit -m "Compiled binaries for commit ${{ steps.get_head.outputs.hash }}"
           git push origin binaries
 
       # Clean up
