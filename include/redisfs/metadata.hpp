@@ -4,7 +4,7 @@
 #include <sys/stat.h>
 #include <vector>
 
-#include "utils.hpp"
+#include "redisfs/utils.hpp"
 
 namespace redisfs {
 

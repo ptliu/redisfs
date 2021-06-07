@@ -11,9 +11,9 @@
 #include <sw/redis++/redis_cluster.h>
 #include <iostream>
 
-#include "exceptions.h"
-#include "metadata.hpp"
-#include "utils.hpp"
+#include "redisfs/exceptions.h"
+#include "redisfs/metadata.hpp"
+#include "redisfs/utils.hpp"
 
 namespace redis = sw::redis;
 
