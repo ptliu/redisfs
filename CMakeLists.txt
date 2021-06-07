@@ -11,16 +11,19 @@ set(VCPKG_OVERLAY_PORTS "${CMAKE_CURRENT_SOURCE_DIR}/overlays")
 
 project(CSE223A)
 
-add_executable(redisfs "")
-target_compile_features(redisfs PUBLIC cxx_std_17)
-
-target_include_directories(redisfs PUBLIC include/)
-add_subdirectory(src/)
+add_library(redisfs_lib)
+target_compile_features(redisfs_lib PUBLIC cxx_std_17)
+target_include_directories(redisfs_lib PUBLIC include/)
 
 # <------------ add redis-plus-plus dependency -------------->
 find_package(redis++ CONFIG REQUIRED)
-target_link_libraries(redisfs PRIVATE redis++::redis++_static)
+target_link_libraries(redisfs_lib PUBLIC redis++::redis++_static)
 
 # <------------ add fuse3 dependency -------------->
 find_package(FUSE3 REQUIRED)
-target_link_libraries(redisfs PRIVATE FUSE3::FUSE3)
+target_link_libraries(redisfs_lib PUBLIC FUSE3::FUSE3)
+
+add_executable(redisfs)
+target_link_libraries(redisfs PRIVATE redisfs_lib)
+
+add_subdirectory(src/)
