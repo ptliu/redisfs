@@ -60,10 +60,7 @@ int redisfs::RedisFS::open( const char * path ) {
     metadata.st.st_mode = 0755;
     metadata.st.st_nlink = 1;
 
-    std::string serialized;
-    serialize( metadata, serialized );
-
-    cluster.set( filename, serialized );
+    cluster.set( filename, metadata.serialize() );
   }
 
   return 0;
@@ -100,8 +97,7 @@ int redisfs::RedisFS::getattr( const char * path, struct stat * stbuf ) {
   std::string filename( path );
   redis::Optional<std::string> val = cluster.get(filename);
   if ( val ) {
-    Metadata metadata;
-    deserialize( metadata, *val );
+    Metadata metadata( *val );
     *stbuf = metadata.st;
     return 0;
   } else {
@@ -136,8 +132,7 @@ int redisfs::RedisFS::read( const char * path, char * buf, size_t size, off_t of
   redis::Optional<std::string> val = cluster.get( filename );
 
   if ( val ) {
-    Metadata metadata;
-    deserialize( metadata, *val );
+    Metadata metadata( *val );
     if ( metadata.blocks.empty() ) {
       return 0; // no blocks to read
     }
@@ -169,8 +164,7 @@ int redisfs::RedisFS::write( const char * path, const char * buf, size_t size, o
   redis::Optional<std::string> val = cluster.get( filename );
   if ( val ) {
     int bytes = 0;
-    Metadata metadata;
-    deserialize( metadata, *val );
+    Metadata metadata( *val );
     std::vector<size_t> blocks = fileBlocks( metadata.blocks, offset, size );
 
     size_t buffer_offset = 0;
@@ -231,9 +225,7 @@ int redisfs::RedisFS::write( const char * path, const char * buf, size_t size, o
 
     }
 
-    std::string serialized;
-    serialize( metadata, serialized );
-    cluster.set( filename, serialized );
+    cluster.set( filename, metadata.serialize() );
 
     return bytes;
   } else {

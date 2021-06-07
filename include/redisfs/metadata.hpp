@@ -10,16 +10,6 @@
 
 namespace redisfs {
 
-    using BlockIndex = size_t;
-
-    typedef struct Metadata {
-        struct stat st;
-        std::vector<BlockIndex> blocks;
-        inline Metadata() {
-            memset( &st, 0, sizeof( struct stat ) );
-        }
-    } Metadata;
-
     static const struct stat _ref = {};
     constexpr size_t SERIALIZED_STAT_SIZE = sizeof( _ref.st_mode ) + 
                                             sizeof( _ref.st_nlink ) +
@@ -91,33 +81,58 @@ namespace redisfs {
 
     }
 
-    inline void serialize( const Metadata & data, std::string & serialized ) {
+    using BlockIndex = size_t;
 
-        size_t blocks = data.blocks.size();
-        reserve( serialized, SERIALIZED_STAT_SIZE + sizeof( size_t ) + blocks * sizeof( BlockIndex ) );
+    typedef struct Metadata {
 
-        serialize( data.st, serialized );
+        struct stat st;
+        std::vector<BlockIndex> blocks;
 
-        appendBytes( serialized, blocks );
-        for ( size_t i = 0; i < blocks; i++ ) {
-            appendBytes( serialized, data.blocks[i] );
+        inline void serialize( std::string & serialized ) {
+
+            size_t nblocks = blocks.size();
+            reserve( serialized, SERIALIZED_STAT_SIZE + sizeof( size_t ) + nblocks * sizeof( BlockIndex ) );
+
+            redisfs::serialize( st, serialized );
+
+            appendBytes( serialized, nblocks );
+            for ( size_t i = 0; i < nblocks; i++ ) {
+                appendBytes( serialized, blocks[i] );
+            }
+
         }
 
-    }
+        inline void deserialize( const std::string & serialized ) {
 
-    inline void deserialize( Metadata & data, const std::string & serialized ) {
+            redisfs::deserialize( st, serialized );
 
-        deserialize( data.st, serialized );
+            size_t nblocks;
+            size_t idx = SERIALIZED_STAT_SIZE;
+            idx = extractBytes( serialized, nblocks, idx );
 
-        size_t blocks;
-        size_t idx = SERIALIZED_STAT_SIZE;
-        idx = extractBytes( serialized, blocks, idx );
+            blocks.resize( nblocks );
+            for ( size_t i = 0; i < nblocks; i++ ) {
+                idx = extractBytes( serialized, blocks[i], idx );
+            }
 
-        data.blocks.resize( blocks );
-        for ( size_t i = 0; i < blocks; i++ ) {
-            idx = extractBytes( serialized, data.blocks[i], idx );
         }
 
-    }
+        inline std::string serialize() {
+
+            std::string serialized;
+            serialize( serialized );
+            return serialized;
+
+        }
+
+        inline Metadata() {
+            memset( &st, 0, sizeof( struct stat ) );
+        }
+        inline Metadata( std::string & serialized ) {
+            deserialize( serialized );
+        }
+
+
+    } Metadata;
 
 }
