@@ -11,7 +11,6 @@
 #include <fcntl.h>
 
 #include "redisfs/exceptions.h"
-#include "redisfs/metadata.hpp"
 #include "redisfs/utils.hpp"
 
 redisfs::RedisFS::RedisFS( const std::string & uri, const size_t blockSize ) : 
@@ -20,7 +19,7 @@ redisfs::RedisFS::RedisFS( const std::string & uri, const size_t blockSize ) :
 redisfs::RedisFS::RedisFS( const std::string & host, const int port, const size_t blockSize ) : 
     RedisFS( host + ":" + std::to_string( port ), blockSize ) {}
 
-inline size_t redisfs::RedisFS::calcOffsetIdx( off_t offset ) {
+inline redisfs::BlockIndex redisfs::RedisFS::calcOffsetIdx( off_t offset ) const {
 
   if ( offset < 0 ) {
     return 0;
@@ -30,9 +29,9 @@ inline size_t redisfs::RedisFS::calcOffsetIdx( off_t offset ) {
 
 }
 
-inline std::vector<size_t> redisfs::RedisFS::fileBlocks( std::vector<size_t> & blocklist, off_t offset, size_t size ) {
+inline std::vector<redisfs::BlockIndex> redisfs::RedisFS::fileBlocks( std::vector<BlockIndex> & blocklist, off_t offset, size_t size ) const {
 
-  std::vector<size_t> blocks;
+  std::vector<BlockIndex> blocks;
   if ( offset < 0 ) {
     return blocks;
   }
@@ -138,7 +137,7 @@ int redisfs::RedisFS::read( const char * path, char * buf, size_t size, off_t of
     }
 
     int bytes = 0;
-    std::vector<size_t> blocks = fileBlocks( metadata.blocks, offset, size );
+    std::vector<BlockIndex> blocks = fileBlocks( metadata.blocks, offset, size );
     for ( auto it = blocks.begin(); it != blocks.end(); it++ ) {
 
       const std::string blockID = std::to_string( *it );
@@ -165,7 +164,7 @@ int redisfs::RedisFS::write( const char * path, const char * buf, size_t size, o
   if ( val ) {
     int bytes = 0;
     Metadata metadata( *val );
-    std::vector<size_t> blocks = fileBlocks( metadata.blocks, offset, size );
+    std::vector<BlockIndex> blocks = fileBlocks( metadata.blocks, offset, size );
 
     size_t buffer_offset = 0;
     size_t list_idx = 0;

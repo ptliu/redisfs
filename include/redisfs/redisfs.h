@@ -7,6 +7,8 @@
 #include <sw/redis++/redis++.h>
 #include <sw/redis++/redis_cluster.h>
 
+#include "redisfs/metadata.hpp"
+
 namespace redisfs {
 
     namespace redis = sw::redis;
@@ -31,8 +33,8 @@ namespace redisfs {
             const redis::ConnectionOptions connectionOptions;
             redis::RedisCluster cluster;
 
-            inline size_t calcOffsetIdx( off_t offset );
-            inline std::vector<size_t> fileBlocks( std::vector<size_t> & blocklist, off_t offset, size_t size );
+            inline BlockIndex calcOffsetIdx( off_t offset ) const;
+            inline std::vector<BlockIndex> fileBlocks( std::vector<BlockIndex> & blocklist, off_t offset, size_t size ) const;
 
     };
 
