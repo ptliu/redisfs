@@ -9,6 +9,8 @@ jobs:
   build:
     name: Build artifact
     runs-on: ubuntu-20.04
+    outputs:
+      commit-hash: ${{ steps.get_head.outputs.hash }}
     steps:
       # Set up
       - name: Check out Git repository
@@ -17,6 +19,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y g++ cmake fuse3 libfuse3-dev pkg-config curl zip unzip tar
+      - name: Get current commit hash
+        id: get_head
+        run: echo "::set-output name=hash::$( git rev-parse HEAD )"
       - name: Get vcpkg commit hash
         id: get_vcpkg
         run: echo "::set-output name=hash::$( git submodule status ./vcpkg_files | awk '{print $1}' )"
@@ -58,9 +63,6 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: binaries
-      - name: Get current commit hash
-        id: get_head
-        run: echo "::set-output name=hash::$( git rev-parse HEAD )"
 
       # Commit results
       - name: Configure git commiter identity
@@ -70,7 +72,7 @@ jobs:
       - name: Commit result
         run: |
           git add --all
-          git diff-index --quiet HEAD || git commit -m "Compiled binaries for commit ${{ steps.get_head.outputs.hash }}"
+          git diff-index --quiet HEAD || git commit -m "Compiled binaries for commit ${{ needs.build.outputs.commit-hash }}"
           git push origin binaries
 
       # Clean up
