@@ -8,7 +8,8 @@
             "features": [
                 "cxx17"
             ]
-        }
+        },
+        "gtest"
     ],
     "builtin-baseline": "c1c253fabc2d08ddb49ce3f40a7996f79e112545"
 }
