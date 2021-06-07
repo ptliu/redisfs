@@ -1,8 +1,9 @@
 #pragma once
 
 #include <string>
-#include <sys/stat.h>
+
 #include <arpa/inet.h>
+
 namespace redisfs {
 
     /**
@@ -11,9 +12,8 @@ namespace redisfs {
      * @tparam T The type to use.
      */
     template<typename T>
-    class Size {
+    struct Size {
 
-        public:
         static constexpr T KILO = 1000;
         static constexpr T MEGA = KILO * KILO;
         static constexpr T GIGA = KILO * MEGA;

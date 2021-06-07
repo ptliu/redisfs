@@ -1,6 +1,6 @@
 target_sources(redisfs
     PRIVATE
-        redisfs.cpp
+        main.cpp
 )
 
 add_subdirectory(redisfs/)

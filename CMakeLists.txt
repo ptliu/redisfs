@@ -19,11 +19,11 @@ target_include_directories(redisfs_lib PUBLIC include/)
 find_package(redis++ CONFIG REQUIRED)
 target_link_libraries(redisfs_lib PUBLIC redis++::redis++_static)
 
-# <------------ add fuse3 dependency -------------->
-find_package(FUSE3 REQUIRED)
-target_link_libraries(redisfs_lib PUBLIC FUSE3::FUSE3)
-
 add_executable(redisfs)
 target_link_libraries(redisfs PRIVATE redisfs_lib)
+
+# <------------ add fuse3 dependency -------------->
+find_package(FUSE3 REQUIRED)
+target_link_libraries(redisfs PRIVATE FUSE3::FUSE3)
 
 add_subdirectory(src/)
