@@ -75,6 +75,7 @@ jobs:
         run: |
           git add *
           git commit -m "Compiled binaries for commit ${{ steps.get_head.outputs.hash }}"
+          git push origin binaries
 
       # Clean up
       - name: Delete artifacts
