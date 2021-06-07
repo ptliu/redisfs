@@ -37,11 +37,6 @@ jobs:
         run: make configure
       - name: Build project
         run: make build
-      - name: Get current commit hash
-        id: get_head
-        run: |
-          val="$( git rev-parse HEAD )"
-          echo "::set-output name=hash::${val}"
 
       # Save results
       - name: Upload artifacts
@@ -65,6 +60,11 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: binaries
+      - name: Get current commit hash
+        id: get_head
+        run: |
+          val="$( git rev-parse HEAD )"
+          echo "::set-output name=hash::${val}"
 
       # Commit results
       - name: Configure git commiter identity
