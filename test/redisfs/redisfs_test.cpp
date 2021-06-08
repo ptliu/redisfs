@@ -55,7 +55,7 @@ static char * randomData( const size_t size ) {
         std::numeric_limits<char>::max() 
     );
 
-    char * data = ( char * ) malloc( size );
+    char * const data = ( char * ) malloc( size );
     for ( size_t i = 0; i < size; i++ ) {
         data[i] = distribution( generator );
     }
@@ -115,7 +115,7 @@ TEST_F( RedisFSTest, TestRead ) {
 
     for ( auto it : baseItems ) {
 
-        char * buf = ( char * ) malloc( it.second.second );
+        char * const buf = ( char * ) malloc( it.second.second );
         fs.read( it.first.c_str(), buf, it.second.second, 0 );
         EXPECT_EQ( memcmp( buf, it.second.first, it.second.second ), 0 );
 
@@ -131,14 +131,14 @@ TEST_F( RedisFSTest, TestOverwrite ) {
 
         const size_t modSize = it.second.second / 4;
         const off_t modIdx = it.second.second / 2;
-        char * mod = randomData( modSize );
+        char * const mod = randomData( modSize );
 
         fs.write( it.first.c_str(), mod, modSize, modIdx );
 
-        char * res = ( char * ) malloc( it.second.second );
+        char * const res = ( char * ) malloc( it.second.second );
         memcpy( res, it.second.first, it.second.second );
 
-        char * buf = ( char * ) malloc( it.second.second );
+        char * const buf = ( char * ) malloc( it.second.second );
         fs.read( it.first.c_str(), buf, it.second.second, 0 );
         EXPECT_EQ( memcmp( buf, res, it.second.second ), 0 );
 
@@ -154,16 +154,16 @@ TEST_F( RedisFSTest, TestAppend ) {
 
     for ( auto it : baseItems ) {
 
-        char * mod = randomData( it.second.second );
+        char * const mod = randomData( it.second.second );
 
         fs.write( it.first.c_str(), mod, it.second.second, it.second.second );
 
         const size_t newSize = it.second.second * 2;
-        char * res = ( char * ) malloc( newSize );
+        char * const res = ( char * ) malloc( newSize );
         memcpy( res, it.second.first, it.second.second );
         memcpy( res + it.second.second, mod, it.second.second );
 
-        char * buf = ( char * ) malloc( newSize );
+        char * const buf = ( char * ) malloc( newSize );
         fs.read( it.first.c_str(), buf, newSize, 0 );
         EXPECT_EQ( memcmp( buf, res, newSize ), 0 );
 
@@ -180,16 +180,16 @@ TEST_F( RedisFSTest, TestOverwriteAndAppend ) {
     for ( auto it : baseItems ) {
 
         const off_t modIdx = it.second.second / 2;
-        char * mod = randomData( it.second.second );
+        char * const mod = randomData( it.second.second );
 
         fs.write( it.first.c_str(), mod, it.second.second, modIdx );
 
         const size_t newSize = modIdx + it.second.second;
-        char * res = ( char * ) malloc( newSize );
+        char * const res = ( char * ) malloc( newSize );
         memcpy( res, it.second.first, modIdx );
         memcpy( res + modIdx, mod, it.second.second );
 
-        char * buf = ( char * ) malloc( newSize );
+        char * const buf = ( char * ) malloc( newSize );
         fs.read( it.first.c_str(), buf, newSize, 0 );
         EXPECT_EQ( memcmp( buf, res, newSize ), 0 );
 
@@ -208,7 +208,7 @@ TEST_F( RedisFSTest, TestReadOffset ) {
         const off_t idx = it.second.second / 2;
         const size_t size = it.second.second / 4;
 
-        char * buf = ( char * ) malloc( size );
+        char * const buf = ( char * ) malloc( size );
         fs.read( it.first.c_str(), buf, size, idx );
         EXPECT_EQ( memcmp( buf, it.second.first + idx, size ), 0 );
 
@@ -220,19 +220,24 @@ TEST_F( RedisFSTest, TestReadOffset ) {
 
 TEST_F( RedisFSTest, TestReadInBounds ) {
 
-    constexpr char CANARY = 0x69;
+    constexpr unsigned long CANARY = 0x69FE42A1;
 
     for ( auto it : baseItems ) {
 
-        char * buf = ( char * ) malloc( it.second.second + 2 );
-        buf[0] = CANARY;
-        buf[it.second.second + 1] = CANARY;
-        
-        fs.read( it.first.c_str(), buf + 1, it.second.second, 0 );
-        EXPECT_EQ( buf[0], CANARY );
-        EXPECT_EQ( buf[it.second.second + 1], CANARY );
+        char * const fullbuf = ( char * ) malloc( it.second.second + 2 * sizeof( unsigned long ) );
 
-        free( buf );
+        unsigned long * const startCanary = ( unsigned long * ) fullbuf;
+        char * const buf = fullbuf + sizeof( unsigned long );
+        unsigned long * const endCanary = ( unsigned long * ) ( buf + it.second.second );
+        
+        *startCanary = CANARY;
+        *endCanary = CANARY;
+        
+        fs.read( it.first.c_str(), buf, it.second.second, 0 );
+        EXPECT_EQ( *startCanary, CANARY );
+        EXPECT_EQ( *endCanary, CANARY );
+
+        free( fullbuf );
 
     }
 

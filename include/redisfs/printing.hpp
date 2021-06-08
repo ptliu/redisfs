@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iomanip>
 #include <iostream>
 #include <vector>
 
@@ -47,5 +48,15 @@ inline std::ostream & operator<<( std::ostream & os, const std::vector<T> & vec 
         idx++;
     }
     return os << "]";
+
+}
+
+inline void printData( std::ostream & os, const char * const buf, const std::string & name, const size_t size, const size_t maxSize = 100 ) {
+    
+    os << name << ": ";
+    for ( size_t i = 0; i < std::min( size, maxSize ); i++ ) {
+        os << std::hex << std::setfill( '0' ) << std::setw( 2 ) << +( ( unsigned char ) buf[i] );
+    }
+    os << std::endl;
 
 }

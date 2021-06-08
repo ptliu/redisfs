@@ -123,21 +123,25 @@ int redisfs::RedisFS::read( const char * const path, char * const buf, const siz
     return -ENOENT;
   }
 
+  int bytes = 0;
   Metadata metadata( *val );
 
-  int bytes = 0;
-  std::vector<BlockIndex> blocks = fileBlocks( metadata.blocks, offset, size );
-  for ( auto it = blocks.begin(); it != blocks.end(); it++ ) {
+  size_t blockIdx = offset / blockSize;
+  off_t blockOffset = offset % blockSize;
+  while ( bytes < size && blockIdx < metadata.blocks.size() ) {
 
-    const std::string blockID = std::to_string( *it );
+    const std::string blockID = std::to_string( metadata.blocks[blockIdx] );
     std::optional<std::string> block = store->get( blockID );
-    if ( block ) {
-      size_t readSize = std::min( block->size(), size - bytes );
-      memcpy( buf + bytes, block->c_str(), readSize );
-      bytes += readSize;
-    } else {
-      throw CorruptFilesystemError( "Block " + blockID + " is missing." );
+    if ( !block ) {
+      throw CorruptFilesystemError( "Block " + blockID + " is missing." );    
     }
+
+    size_t readSize = std::min( block->size() - blockOffset, size - bytes );
+    memcpy( buf + bytes, block->c_str() + blockOffset, readSize );
+
+    bytes += readSize;
+    blockIdx++;
+    blockOffset = 0;
 
   }
 
