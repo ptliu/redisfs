@@ -217,3 +217,23 @@ TEST_F( RedisFSTest, TestReadOffset ) {
     }
 
 }
+
+TEST_F( RedisFSTest, TestReadInBounds ) {
+
+    constexpr char CANARY = 0x69;
+
+    for ( auto it : baseItems ) {
+
+        char * buf = ( char * ) malloc( it.second.second + 2 );
+        buf[0] = CANARY;
+        buf[it.second.second + 1] = CANARY;
+        
+        fs.read( it.first.c_str(), buf + 1, it.second.second, 0 );
+        EXPECT_EQ( buf[0], CANARY );
+        EXPECT_EQ( buf[it.second.second + 1], CANARY );
+
+        free( buf );
+
+    }
+
+}
