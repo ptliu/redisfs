@@ -57,7 +57,7 @@ int redisfs::RedisFS::open( const char * path ) {
 
 int redisfs::RedisFS::release( const char * path ) {
 
-  return 0; //nothing needs to be done
+  return 0; // TODO?
 
 }
 
@@ -105,12 +105,12 @@ int redisfs::RedisFS::readdir( const char * const path, void * const buf, const 
 
   std::string filename( path );
   std::optional<std::string> val = store->get( filename );
-  if ( val ) {
-    // TODO ?
-    return 0;
-  } else {
+  if ( !val ) {
     return -ENOENT;
   }
+  
+  // TODO ?
+  return 0;
 
 }
 
@@ -119,30 +119,31 @@ int redisfs::RedisFS::read( const char * const path, char * const buf, const siz
   std::string filename( path );
   std::optional<std::string> val = store->get( filename );
 
-  if ( val ) {
-    Metadata metadata( *val );
-    if ( metadata.blocks.empty() ) {
-      return 0; // no blocks to read
-    }
-
-    int bytes = 0;
-    std::vector<BlockIndex> blocks = fileBlocks( metadata.blocks, offset, size );
-    for ( auto it = blocks.begin(); it != blocks.end(); it++ ) {
-
-      const std::string blockID = std::to_string( *it );
-      std::optional<std::string> block = store->get( blockID );
-      if ( block ) {
-        memcpy( buf + bytes, block->c_str(), block->size() );
-        bytes += block->size();
-      } else {
-        throw CorruptFilesystemError( "Block " + blockID + " is missing." );
-      }
-
-    }
-    return bytes;
-  } else {
+  if ( !val ) {
     return -ENOENT;
   }
+
+  Metadata metadata( *val );
+
+  int bytes = 0;
+  std::vector<BlockIndex> blocks = fileBlocks( metadata.blocks, offset, size );
+  for ( auto it = blocks.begin(); it != blocks.end(); it++ ) {
+
+    const std::string blockID = std::to_string( *it );
+    std::optional<std::string> block = store->get( blockID );
+    if ( block ) {
+      size_t readSize = std::min( block->size(), size - bytes );
+      memcpy( buf + bytes, block->c_str(), readSize );
+      bytes += readSize;
+    } else {
+      throw CorruptFilesystemError( "Block " + blockID + " is missing." );
+    }
+
+  }
+
+  // TODO: Update metadata?
+
+  return bytes;
 
 }
 
