@@ -50,10 +50,35 @@ jobs:
           name: binaries
           path: |
             ./build/redisfs
+            ./build/redisfs_test
+
+  test:
+    name: Run tests
+    needs: build
+    runs-on: ubuntu-20.04
+    steps:
+      # Set up
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: binaries
+
+      # Run tests
+      - name: Run tests
+        run: ./redisfs_test
+
+      # Clean up if aborting
+      - name: Delete artifacts
+        if: failure()
+        uses: geekyeggo/delete-artifact@v1
+        with:
+          name: binaries
 
   commit:
     name: Commit results
-    needs: build
+    needs: 
+      - build
+      - test
     runs-on: ubuntu-20.04
     steps:
       # Set up
