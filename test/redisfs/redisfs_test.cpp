@@ -9,7 +9,9 @@
 #include "redisfs/utils.hpp"
 
 using Size = redisfs::Size<size_t>;
+
 constexpr size_t BLOCK_SIZE = 64 * Size::KILO;
+constexpr size_t SEED = 4201337;
 
 class MemoryStore : public redisfs::KVStore {
 
@@ -17,6 +19,7 @@ class MemoryStore : public redisfs::KVStore {
     std::unordered_map<std::string, std::string> map; // Public since its for testing anyway
 
     std::optional<std::string> get( const std::string_view & key ) override {
+        
         std::string k( key );
         auto it = map.find( k );
         if ( it == map.end() ) {
@@ -24,22 +27,28 @@ class MemoryStore : public redisfs::KVStore {
         } else {
             return it->second;
         }
+
     }
 
-    virtual bool set( const std::string_view & key, const std::string_view & value ) override {
+    bool set( const std::string_view & key, const std::string_view & value ) override {
 
         std::string k( key ), v( value );
-
         map[k] = v;
         return true;
     
+    }
+
+    bool del( const std::string_view & key ) override {
+                
+        std::string k( key );
+        return map.erase( k ) == 1;
+
     }
 
 };
 
 static char * randomData( const size_t size ) {
 
-    constexpr size_t SEED = 4201337;
     static std::default_random_engine generator( SEED );
     static std::uniform_int_distribution<char> distribution( 
         std::numeric_limits<char>::min(), 

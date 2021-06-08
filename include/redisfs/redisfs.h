@@ -19,10 +19,10 @@ namespace redisfs {
             int open( const char * path );
             int release( const char * path );
 
-            int getattr( const char * path, struct stat * stbuf );
-            int readdir( const char * path, void * buf, off_t offset );
-            int read( const char * path, char * buf, size_t size, off_t offset );
-            int write( const char * path, const char * buf, size_t size, off_t offset );
+            int getattr( const char * const path, struct stat * stbuf );
+            int readdir( const char * const path, void * const buf, const off_t offset );
+            int read( const char * const path, char * const buf, const size_t size, const off_t offset );
+            int write( const char * const path, const char * const buf, const size_t size, const off_t offset );
         
         private:
             std::shared_ptr<KVStore> store;

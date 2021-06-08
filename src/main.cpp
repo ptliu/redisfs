@@ -35,6 +35,9 @@ namespace redisfs {
             bool set( const std::string_view & key, const std::string_view & value ) override {
                 return cluster.set( key, value );
             }
+            bool del( const std::string_view & key ) override {
+                return cluster.del( key ) == 1;
+            }
 
         };
 

@@ -28,21 +28,13 @@ inline redisfs::BlockIndex redisfs::RedisFS::calcOffsetIdx( off_t offset ) const
 
 inline std::vector<redisfs::BlockIndex> redisfs::RedisFS::fileBlocks( std::vector<BlockIndex> & blocklist, off_t offset, size_t size ) const {
 
-  std::vector<BlockIndex> blocks;
-  if ( offset < 0 ) {
-    return blocks;
+  if ( offset < 0 || blocklist.empty() ) {
+    return {};
   }
 
-  size_t end = ( size_t ) offset + size;
-  for ( size_t i = ( size_t ) offset; i < end; i += blockSize ) {
-
-    size_t idx = calcOffsetIdx( i );
-    if ( idx < blocklist.size() ) {
-      blocks.push_back( blocklist[i] );
-    }
-
-  }
-  return blocks;
+  BlockIndex first = std::min( blocklist.size(), calcOffsetIdx( offset ) );
+  BlockIndex last  = std::min( blocklist.size(), calcOffsetIdx( offset + size - 1 ) + 1 );
+  return std::vector<BlockIndex>( blocklist.begin() + first, blocklist.begin() + last );
 
 }
 
@@ -88,7 +80,7 @@ static int test_getattr(const char *path, struct stat *stbuf)
 }
 */
 
-int redisfs::RedisFS::getattr( const char * path, struct stat * stbuf ) {
+int redisfs::RedisFS::getattr( const char * const path, struct stat * stbuf ) {
 
   std::string filename( path );
   std::optional<std::string> val = store->get(filename);
@@ -109,7 +101,7 @@ int redisfs::RedisFS::getattr( const char * path, struct stat * stbuf ) {
   
 }
 
-int redisfs::RedisFS::readdir( const char * path, void * buf, off_t offset ) {
+int redisfs::RedisFS::readdir( const char * const path, void * const buf, const off_t offset ) {
 
   std::string filename( path );
   std::optional<std::string> val = store->get( filename );
@@ -122,7 +114,7 @@ int redisfs::RedisFS::readdir( const char * path, void * buf, off_t offset ) {
 
 }
 
-int redisfs::RedisFS::read( const char * path, char * buf, size_t size, off_t offset ) {
+int redisfs::RedisFS::read( const char * const path, char * const buf, const size_t size, const off_t offset ) {
 
   std::string filename( path );
   std::optional<std::string> val = store->get( filename );
@@ -154,78 +146,75 @@ int redisfs::RedisFS::read( const char * path, char * buf, size_t size, off_t of
 
 }
 
-int redisfs::RedisFS::write( const char * path, const char * buf, size_t size, off_t offset ) {
+int redisfs::RedisFS::write( const char * const path, const char * const buf, const size_t size, const off_t offset ) {
+
+  if ( offset < 0 ) { // TODO: Is this a valid input?
+    throw std::runtime_error( "Negative offset" );
+  }
 
   std::string filename( path );
   std::optional<std::string> val = store->get( filename );
-  if ( val ) {
-    int bytes = 0;
-    Metadata metadata( *val );
-    std::vector<BlockIndex> blocks = fileBlocks( metadata.blocks, offset, size );
-
-    size_t buffer_offset = 0;
-    size_t list_idx = 0;
-    for ( auto it = blocks.begin(); it != blocks.end(); it++ ) {
-
-      std::string blockID = std::to_string( *it );
-      std::optional<std::string> block = store->get( blockID );
-      if ( block ) {
-        std::string block_string = std::string( *block );
-        if ( buffer_offset == 0 ) {
-
-          // special case first block
-          size_t first_block_offset = offset % blockSize;
-          size_t block_len = std::min( size - first_block_offset, blockSize - first_block_offset );
-          std::string modified_block = block_string.replace( first_block_offset, block_len, std::string( buf, block_len ) );
-          size_t block_hash = std::hash<std::string>{}( modified_block );
-
-          // put block back in block store
-          store->set( std::to_string( block_hash ), modified_block );
-          metadata.blocks[list_idx] = block_hash;
-          bytes += block_len;
-          if ( ( size_t ) bytes >= size ) { // bytes is always positive so this is ok
-            break;
-          }
-        } else {
-
-          size_t block_len = std::min( size - bytes, ( size_t ) blockSize ); // TODO
-          std::string modified_block = block_string.replace( 0, block_len, std::string( buf + bytes, block_len ) );
-          size_t block_hash = std::hash<std::string>{}( modified_block );
-          // put block back in block store
-          store->set( std::to_string( block_hash ), modified_block );
-          metadata.blocks[list_idx] = block_hash;
-          bytes += block_len;
-          if ( ( size_t ) bytes >= size ) { //bytes is always positive so this is ok
-            break;
-          }
-        }
-        bytes += block->size();
-      } else {
-        throw CorruptFilesystemError( "Block " + blockID + " is missing." );
-      }
-      list_idx++;
-
-    }
-
-    //append to file
-    for ( ; (size_t )bytes <= size; ) {
-
-      size_t block_len = std::min( size - bytes, ( size_t ) blockSize ); //TODO
-      std::string new_block = std::string( buf + bytes, block_len );
-      size_t block_hash = std::hash<std::string>{}( new_block );
-      //put block back in block store
-      store->set( std::to_string( block_hash ), new_block );
-      metadata.blocks.push_back( block_hash );
-
-      bytes += block_len;
-
-    }
-
-    store->set( filename, metadata.serialize() );
-
-    return bytes;
-  } else {
+  if ( !val ) {
     return -ENOENT;
   }
+
+  size_t bytes = 0;
+  Metadata metadata( *val );
+
+  // Write to existing blocks
+  size_t blockIdx = offset / blockSize;
+  off_t blockOffset = offset % blockSize;
+  while ( bytes < size && blockIdx < metadata.blocks.size() ) {
+    
+    size_t newSize = std::min( blockSize - blockOffset, size - bytes );
+    BlockIndex oldIdx = metadata.blocks[blockIdx];
+    std::string oldID = std::to_string( oldIdx );
+
+    std::string blockString;
+    if ( newSize == blockSize ) { // Replace whole block
+      blockString = std::string( buf + bytes, blockSize );
+    } else { // Replace part of block
+      std::optional<std::string> block = store->get( oldID );
+      if ( !block ) {
+        throw CorruptFilesystemError( "Block " + oldID + " is missing." );
+      }
+      blockString = std::string( *block );
+      size_t oldSize = std::min( blockString.size() - blockOffset, newSize );
+      blockString.replace( blockOffset, oldSize, buf + bytes, newSize );
+    }
+    BlockIndex newIdx = std::hash<std::string>{}( blockString );
+
+    // Put block back in block store
+    store->set( std::to_string( newIdx ), blockString ); // TODO: deal with conflicts
+    if ( oldIdx != newIdx ) { // Gotta check just in case
+      store->del( oldID );
+      metadata.blocks[blockIdx] = newIdx;
+    }
+
+    bytes += newSize;
+    blockIdx++;
+    blockOffset = 0;
+
+  }
+
+  //append to file
+  while ( bytes < size ) {
+
+    size_t newSize = std::min( size - bytes, blockSize );
+    std::string blockString( buf + bytes, newSize );
+    BlockIndex newIdx = std::hash<std::string>{}( blockString ); // TODO: deal with conflicts
+    // Put block in block store
+    store->set( std::to_string( newIdx ), blockString );
+    metadata.blocks.push_back( newIdx );
+
+    bytes += newSize;
+
+  }
+
+  // TODO: Update metadata
+
+  store->set( filename, metadata.serialize() );
+
+  return bytes;
 
 }
