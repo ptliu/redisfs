@@ -3,9 +3,9 @@ BUILD_TYPE?=Release
 BUILD_DIR=./build
 VCPKG_DIR=./vcpkg_files
 
-.PHONY: all configure build clean cleanall init
+.PHONY: all configure build clean cleanall init run test
 
-all: configure build
+all: configure build test
 
 configure:
 	cmake -B "${BUILD_DIR}" -S . -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
@@ -23,3 +23,9 @@ init:
 	git submodule update --init --recursive
 	${VCPKG_DIR}/bootstrap-vcpkg.sh
 	ln --symbolic --force -T "${VCPKG_DIR}/vcpkg" "./vcpkg"
+
+run:
+	${BUILD_DIR}/redisfs
+
+test:
+	timeout --verbose 10s ${BUILD_DIR}/redisfs_test
