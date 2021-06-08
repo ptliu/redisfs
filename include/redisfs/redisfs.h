@@ -27,9 +27,6 @@ namespace redisfs {
         private:
             std::shared_ptr<KVStore> store;
 
-            inline BlockIndex calcOffsetIdx( off_t offset ) const;
-            inline std::vector<BlockIndex> fileBlocks( std::vector<BlockIndex> & blocklist, off_t offset, size_t size ) const;
-
     };
 
 }

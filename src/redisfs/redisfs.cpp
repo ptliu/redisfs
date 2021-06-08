@@ -16,28 +16,6 @@
 redisfs::RedisFS::RedisFS( const std::shared_ptr<KVStore> & store, const size_t blockSize ) : 
     store( store ), blockSize( blockSize ) {}
 
-inline redisfs::BlockIndex redisfs::RedisFS::calcOffsetIdx( off_t offset ) const {
-
-  if ( offset < 0 ) {
-    return 0;
-  } else {
-    return offset / blockSize;
-  }
-
-}
-
-inline std::vector<redisfs::BlockIndex> redisfs::RedisFS::fileBlocks( std::vector<BlockIndex> & blocklist, off_t offset, size_t size ) const {
-
-  if ( offset < 0 || blocklist.empty() ) {
-    return {};
-  }
-
-  BlockIndex first = std::min( blocklist.size(), calcOffsetIdx( offset ) );
-  BlockIndex last  = std::min( blocklist.size(), calcOffsetIdx( offset + size - 1 ) + 1 );
-  return std::vector<BlockIndex>( blocklist.begin() + first, blocklist.begin() + last );
-
-}
-
 int redisfs::RedisFS::open( const char * path ) {
 
   std::string filename( path );
@@ -116,6 +94,10 @@ int redisfs::RedisFS::readdir( const char * const path, void * const buf, const 
 
 int redisfs::RedisFS::read( const char * const path, char * const buf, const size_t size, const off_t offset ) {
 
+  if ( offset < 0 ) { // TODO: Is this a valid input?
+    throw std::domain_error( "Negative offset" );
+  }
+
   std::string filename( path );
   std::optional<std::string> val = store->get( filename );
 
@@ -154,7 +136,7 @@ int redisfs::RedisFS::read( const char * const path, char * const buf, const siz
 int redisfs::RedisFS::write( const char * const path, const char * const buf, const size_t size, const off_t offset ) {
 
   if ( offset < 0 ) { // TODO: Is this a valid input?
-    throw std::runtime_error( "Negative offset" );
+    throw std::domain_error( "Negative offset" );
   }
 
   std::string filename( path );
