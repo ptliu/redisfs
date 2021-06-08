@@ -137,6 +137,7 @@ TEST_F( RedisFSTest, TestOverwrite ) {
 
         char * const res = ( char * ) malloc( it.second.second );
         memcpy( res, it.second.first, it.second.second );
+        memcpy( res + modIdx, mod, modSize );
 
         char * const buf = ( char * ) malloc( it.second.second );
         fs.read( it.first.c_str(), buf, it.second.second, 0 );
