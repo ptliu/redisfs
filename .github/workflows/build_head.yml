@@ -68,7 +68,7 @@ jobs:
 
       # Run tests
       - name: Run tests
-        run: timeout --verbose 10s ./binaries/redisfs_test
+        run: timeout --verbose 1m ./binaries/redisfs_test
 
       # Clean up if aborting
       - name: Delete artifacts

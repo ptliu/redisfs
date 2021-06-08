@@ -1,4 +1,5 @@
 BUILD_TYPE?=Release
+TIMEOUT?=1m
 
 BUILD_DIR=./build
 VCPKG_DIR=./vcpkg_files
@@ -28,4 +29,4 @@ run:
 	${BUILD_DIR}/redisfs
 
 test:
-	timeout --verbose 10s ${BUILD_DIR}/redisfs_test
+	timeout --verbose ${TIMEOUT} ${BUILD_DIR}/redisfs_test
