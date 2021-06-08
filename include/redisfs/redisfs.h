@@ -1,23 +1,18 @@
 #pragma once
 
+#include <memory>
 #include <string>
 
 #include <sys/stat.h>
 
-#include <sw/redis++/redis++.h>
-#include <sw/redis++/redis_cluster.h>
-
+#include "redisfs/kvstore.h"
 #include "redisfs/metadata.hpp"
 
 namespace redisfs {
-
-    namespace redis = sw::redis;
-
     class RedisFS {
 
         public:
-            RedisFS( const std::string & uri, const size_t blockSizes );
-            RedisFS( const std::string & host, const int port, const size_t blockSize );
+            RedisFS( const std::shared_ptr<KVStore> & store, const size_t blockSize );
 
             const size_t blockSize;
 
@@ -30,8 +25,7 @@ namespace redisfs {
             int write( const char * path, const char * buf, size_t size, off_t offset );
         
         private:
-            const redis::ConnectionOptions connectionOptions;
-            redis::RedisCluster cluster;
+            std::shared_ptr<KVStore> store;
 
             inline BlockIndex calcOffsetIdx( off_t offset ) const;
             inline std::vector<BlockIndex> fileBlocks( std::vector<BlockIndex> & blocklist, off_t offset, size_t size ) const;

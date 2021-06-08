@@ -13,11 +13,8 @@
 #include "redisfs/exceptions.h"
 #include "redisfs/utils.hpp"
 
-redisfs::RedisFS::RedisFS( const std::string & uri, const size_t blockSize ) : 
-    blockSize( blockSize ), connectionOptions( uri ), cluster( connectionOptions ) {}
-
-redisfs::RedisFS::RedisFS( const std::string & host, const int port, const size_t blockSize ) : 
-    RedisFS( host + ":" + std::to_string( port ), blockSize ) {}
+redisfs::RedisFS::RedisFS( const std::shared_ptr<KVStore> & store, const size_t blockSize ) : 
+    store( store ), blockSize( blockSize ) {}
 
 inline redisfs::BlockIndex redisfs::RedisFS::calcOffsetIdx( off_t offset ) const {
 
@@ -52,14 +49,14 @@ inline std::vector<redisfs::BlockIndex> redisfs::RedisFS::fileBlocks( std::vecto
 int redisfs::RedisFS::open( const char * path ) {
 
   std::string filename( path );
-  redis::Optional<std::string> val = cluster.get( filename );
+  std::optional<std::string> val = store->get( filename );
   if ( !val ) {
     //create the file as it doesn't exist
     Metadata metadata;
     metadata.st.st_mode = 0755;
     metadata.st.st_nlink = 1;
 
-    cluster.set( filename, metadata.serialize() );
+    store->set( filename, metadata.serialize() );
   }
 
   return 0;
@@ -94,7 +91,7 @@ static int test_getattr(const char *path, struct stat *stbuf)
 int redisfs::RedisFS::getattr( const char * path, struct stat * stbuf ) {
 
   std::string filename( path );
-  redis::Optional<std::string> val = cluster.get(filename);
+  std::optional<std::string> val = store->get(filename);
   if ( val ) {
     Metadata metadata( *val );
     *stbuf = metadata.st;
@@ -115,7 +112,7 @@ int redisfs::RedisFS::getattr( const char * path, struct stat * stbuf ) {
 int redisfs::RedisFS::readdir( const char * path, void * buf, off_t offset ) {
 
   std::string filename( path );
-  redis::Optional<std::string> val = cluster.get( filename );
+  std::optional<std::string> val = store->get( filename );
   if ( val ) {
     // TODO ?
     return 0;
@@ -128,7 +125,7 @@ int redisfs::RedisFS::readdir( const char * path, void * buf, off_t offset ) {
 int redisfs::RedisFS::read( const char * path, char * buf, size_t size, off_t offset ) {
 
   std::string filename( path );
-  redis::Optional<std::string> val = cluster.get( filename );
+  std::optional<std::string> val = store->get( filename );
 
   if ( val ) {
     Metadata metadata( *val );
@@ -141,7 +138,7 @@ int redisfs::RedisFS::read( const char * path, char * buf, size_t size, off_t of
     for ( auto it = blocks.begin(); it != blocks.end(); it++ ) {
 
       const std::string blockID = std::to_string( *it );
-      redis::Optional<std::string> block = cluster.get( blockID );
+      std::optional<std::string> block = store->get( blockID );
       if ( block ) {
         memcpy( buf + bytes, block->c_str(), block->size() );
         bytes += block->size();
@@ -160,7 +157,7 @@ int redisfs::RedisFS::read( const char * path, char * buf, size_t size, off_t of
 int redisfs::RedisFS::write( const char * path, const char * buf, size_t size, off_t offset ) {
 
   std::string filename( path );
-  redis::Optional<std::string> val = cluster.get( filename );
+  std::optional<std::string> val = store->get( filename );
   if ( val ) {
     int bytes = 0;
     Metadata metadata( *val );
@@ -171,7 +168,7 @@ int redisfs::RedisFS::write( const char * path, const char * buf, size_t size, o
     for ( auto it = blocks.begin(); it != blocks.end(); it++ ) {
 
       std::string blockID = std::to_string( *it );
-      redis::Optional<std::string> block = cluster.get( blockID );
+      std::optional<std::string> block = store->get( blockID );
       if ( block ) {
         std::string block_string = std::string( *block );
         if ( buffer_offset == 0 ) {
@@ -183,7 +180,7 @@ int redisfs::RedisFS::write( const char * path, const char * buf, size_t size, o
           size_t block_hash = std::hash<std::string>{}( modified_block );
 
           // put block back in block store
-          cluster.set( std::to_string( block_hash ), modified_block );
+          store->set( std::to_string( block_hash ), modified_block );
           metadata.blocks[list_idx] = block_hash;
           bytes += block_len;
           if ( ( size_t ) bytes >= size ) { // bytes is always positive so this is ok
@@ -195,7 +192,7 @@ int redisfs::RedisFS::write( const char * path, const char * buf, size_t size, o
           std::string modified_block = block_string.replace( 0, block_len, std::string( buf + bytes, block_len ) );
           size_t block_hash = std::hash<std::string>{}( modified_block );
           // put block back in block store
-          cluster.set( std::to_string( block_hash ), modified_block );
+          store->set( std::to_string( block_hash ), modified_block );
           metadata.blocks[list_idx] = block_hash;
           bytes += block_len;
           if ( ( size_t ) bytes >= size ) { //bytes is always positive so this is ok
@@ -217,14 +214,14 @@ int redisfs::RedisFS::write( const char * path, const char * buf, size_t size, o
       std::string new_block = std::string( buf + bytes, block_len );
       size_t block_hash = std::hash<std::string>{}( new_block );
       //put block back in block store
-      cluster.set( std::to_string( block_hash ), new_block );
+      store->set( std::to_string( block_hash ), new_block );
       metadata.blocks.push_back( block_hash );
 
       bytes += block_len;
 
     }
 
-    cluster.set( filename, metadata.serialize() );
+    store->set( filename, metadata.serialize() );
 
     return bytes;
   } else {

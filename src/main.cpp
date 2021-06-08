@@ -1,6 +1,10 @@
 #define FUSE_USE_VERSION 31
 
+#include <memory>
 #include <fuse3/fuse.h>
+
+#include <sw/redis++/redis++.h>
+#include <sw/redis++/redis_cluster.h>
 
 #include "redisfs/redisfs.h"
 #include "redisfs/utils.hpp"
@@ -9,7 +13,34 @@ constexpr size_t BLOCK_SIZE = 512 * redisfs::Size<size_t>::MEGA;
 
 namespace redisfs {
 
-  namespace fuse {
+    namespace redis {
+
+        using namespace sw::redis;
+
+        /**
+         * @brief Store that redirects everything to a Redis cluster.
+         * 
+         */
+        class RedisClusterStore : public KVStore {
+
+            private:
+            redis::RedisCluster cluster;
+
+            public:
+            RedisClusterStore( const redis::ConnectionOptions & options ) : cluster( options ) {}
+
+            std::optional<std::string> get( const std::string_view & key ) override {
+                return cluster.get( key );
+            }
+            bool set( const std::string_view & key, const std::string_view & value ) override {
+                return cluster.set( key, value );
+            }
+
+        };
+
+    }
+
+    namespace fuse {
 
     static struct redis_fs_info {
 
@@ -27,7 +58,12 @@ namespace redisfs {
 
         std::string host = "127.0.0.1"; // Required.
         int         port = 7000;        // Optional. The default port is 6379.
-        redis_fs_info.fs = std::make_shared<RedisFS>( host, port, BLOCK_SIZE );
+        const std::string & uri = host + ":" + std::to_string( port );
+
+        const redis::ConnectionOptions connectionOptions( uri );
+        std::shared_ptr<KVStore> store = std::make_shared<redis::RedisClusterStore>( connectionOptions );
+
+        redis_fs_info.fs = std::make_shared<RedisFS>( store, BLOCK_SIZE );
 
         return ( void * ) &redis_fs_info;
         
@@ -87,12 +123,12 @@ namespace redisfs {
         .init = init,
     };
 
-  }
+    }
 
 }
 
 int main( int argc, char *argv[] ) {
 
-  return fuse_main( argc, argv, &redisfs::fuse::test_oper, NULL );
+    return fuse_main( argc, argv, &redisfs::fuse::test_oper, NULL );
 
 }
