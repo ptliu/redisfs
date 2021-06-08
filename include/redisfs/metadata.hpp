@@ -8,6 +8,10 @@
 
 #include "redisfs/utils.hpp"
 
+#if defined( __GNUC__ ) && ( __GNUC__ > 11 || ( __GNUC__ == 11 && __GNUC_MINOR__ >= 1 ) )
+    #define SKIP_RESERVE_CHECK
+#endif
+
 namespace redisfs {
 
     static const struct stat _ref = {};
@@ -22,10 +26,6 @@ namespace redisfs {
                                             sizeof( _ref.st_mtim.tv_sec ) +
                                             sizeof( _ref.st_ctim.tv_nsec ) +
                                             sizeof( _ref.st_ctim.tv_sec );
-
-#if defined( __GNUC__ ) && ( __GNUC__ > 11 || ( __GNUC__ == 11 && __GNUC_MINOR__ >= 1 ) )
-    #define SKIP_RESERVE_CHECK
-#endif
 
     inline void reserve( std::string & s, size_t size ) {
 
