@@ -62,10 +62,13 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: binaries
+          path: binaries
+      - name: Fix file permisssions
+        run: chmod 0755 ./binaries/*
 
       # Run tests
       - name: Run tests
-        run: ./redisfs_test
+        run: ./binaries/redisfs_test
 
       # Clean up if aborting
       - name: Delete artifacts
@@ -90,6 +93,9 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: binaries
+          path: binaries
+      - name: Fix file permisssions
+        run: chmod 0755 ./binaries/*
 
       # Commit results
       - name: Configure git commiter identity
@@ -98,7 +104,7 @@ jobs:
           git config user.email github-actions@github.com
       - name: Commit result
         run: |
-          git add --all
+          git add ./binaries/*
           git diff-index --quiet HEAD || git commit -m "Compiled binaries for commit ${{ needs.build.outputs.commit-hash }}"
           git push origin binaries
 
