@@ -6,6 +6,7 @@
 
 #include <sys/stat.h>
 
+#include "redisfs/printing.hpp"
 #include "redisfs/utils.hpp"
 
 #if defined( __GNUC__ ) && ( __GNUC__ > 11 || ( __GNUC__ == 11 && __GNUC_MINOR__ >= 1 ) )
@@ -88,7 +89,7 @@ namespace redisfs {
         struct stat st;
         std::vector<BlockIndex> blocks;
 
-        inline void serialize( std::string & serialized ) {
+        inline void serialize( std::string & serialized ) const {
 
             size_t nblocks = blocks.size();
             reserve( serialized, SERIALIZED_STAT_SIZE + sizeof( size_t ) + nblocks * sizeof( BlockIndex ) );
@@ -117,7 +118,7 @@ namespace redisfs {
 
         }
 
-        inline std::string serialize() {
+        inline std::string serialize() const {
 
             std::string serialized;
             serialize( serialized );
@@ -128,10 +129,18 @@ namespace redisfs {
         inline Metadata() {
             memset( &st, 0, sizeof( struct stat ) );
         }
-        inline Metadata( std::string & serialized ) {
+        inline Metadata( const struct stat & st, const std::vector<BlockIndex> & blocks ) : blocks( blocks ) {
+            this->st = st;
+        }
+        inline Metadata( const std::string & serialized ) {
             deserialize( serialized );
         }
 
+        friend std::ostream & operator<<( std::ostream & os, const Metadata & data ) {
+
+            return os << "Metadata{.st=" << data.st << ", .blocks=" << data.blocks << "}";
+
+        }
 
     } Metadata;
 

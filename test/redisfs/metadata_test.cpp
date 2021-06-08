@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+#include "redisfs/printing.hpp"
+
 static struct stat stats[] {
 
     {
@@ -67,35 +69,6 @@ static struct stat stats[] {
 
 };
 
-#define PRINT_STRUCT_FIRST_FIELD( field ) "." << #field << "=" << st.field
-#define PRINT_STRUCT_FIELD( field ) ", " << PRINT_STRUCT_FIRST_FIELD( field )
-
-std::ostream & operator<<( std::ostream & os, const struct stat & st ) {
-
-    return os << "stat{"
-              << PRINT_STRUCT_FIRST_FIELD( st_dev )
-              << PRINT_STRUCT_FIELD( st_ino )
-              << PRINT_STRUCT_FIELD( st_mode )
-              << PRINT_STRUCT_FIELD( st_nlink )
-              << PRINT_STRUCT_FIELD( st_uid )
-              << PRINT_STRUCT_FIELD( st_gid )
-              << PRINT_STRUCT_FIELD( st_rdev )
-              << PRINT_STRUCT_FIELD( st_size )
-              << PRINT_STRUCT_FIELD( st_blksize )
-              << PRINT_STRUCT_FIELD( st_blocks )
-
-              << PRINT_STRUCT_FIELD( st_atim.tv_nsec )
-              << PRINT_STRUCT_FIELD( st_atim.tv_sec )
-
-              << PRINT_STRUCT_FIELD( st_mtim.tv_nsec )
-              << PRINT_STRUCT_FIELD( st_mtim.tv_sec )
-
-              << PRINT_STRUCT_FIELD( st_ctim.tv_nsec )
-              << PRINT_STRUCT_FIELD( st_ctim.tv_sec )
-              << "}";
-
-}
-
 class SerializeStatTest : public testing::TestWithParam<struct stat> {};
 
 void compareStats( const struct stat & actual, const struct stat & expected ) {
@@ -141,3 +114,54 @@ TEST_P( SerializeStatTest, RestoresProperly ) {
 }
 
 INSTANTIATE_TEST_SUITE_P( Main, SerializeStatTest, testing::ValuesIn( stats ) );
+
+using redisfs::Metadata;
+using redisfs::BlockIndex;
+
+static Metadata datas[] = {
+
+    Metadata( stats[0], {} ),
+    Metadata( stats[0], { 0, 1, 4, 5 } ),
+    Metadata( stats[0], { 10, 14, 15, 1, 1000, 0 } ),
+    Metadata( stats[1], {} ),
+    Metadata( stats[1], { 0, 1, 4, 5 } ),
+    Metadata( stats[1], { 10, 14, 15, 1, 1000, 0 } )
+
+};
+
+class SerializeMetadataTest : public testing::TestWithParam<Metadata> {};
+
+void compareVectors( const std::vector<BlockIndex> & actual, const std::vector<BlockIndex> & expected ) {
+
+    EXPECT_EQ( actual.size(), expected.size() );
+    for ( unsigned int i = 0; i < std::min( actual.size(), expected.size() ); i++ ) {
+        SCOPED_TRACE( "" );
+        EXPECT_EQ( actual[i], expected[i] );
+    }
+
+}
+
+void compareMetadata( const Metadata & actual, const Metadata & expected ) {
+
+    SCOPED_TRACE( "" );
+    compareStats( actual.st, expected.st );
+    compareVectors( actual.blocks, actual.blocks );
+
+}
+
+TEST_P( SerializeMetadataTest, RestoresProperly ) {
+
+    const Metadata & value = GetParam();
+
+    const std::string buf = value.serialize();
+
+    EXPECT_EQ( buf.size(), redisfs::SERIALIZED_STAT_SIZE + sizeof( size_t ) + value.blocks.size() * sizeof( BlockIndex ) );
+
+    const Metadata restored( buf );
+
+    SCOPED_TRACE( "" );
+    compareMetadata( restored, value );
+
+}
+
+INSTANTIATE_TEST_SUITE_P( Main, SerializeMetadataTest, testing::ValuesIn( datas ) );
