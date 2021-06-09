@@ -45,6 +45,12 @@ class MemoryStore : public redisfs::KVStore {
 
     }
 
+    void clear() {
+
+        map.clear();
+
+    }
+
 };
 
 static char * randomData( const size_t size ) {
