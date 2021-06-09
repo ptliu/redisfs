@@ -38,6 +38,10 @@ target_link_libraries(redisfs_test PRIVATE redisfs_lib)
 find_package(GTest CONFIG REQUIRED)
 target_link_libraries(redisfs_test PRIVATE GTest::gtest_main)
 
+# <------------ Configure block-level evaluation executable -------------->
+add_executable(redisfs_eval_block)
+target_link_libraries(redisfs_eval_block PRIVATE redisfs_lib)
+
 add_subdirectory(test/)
 
 # Discover tests with CMake
