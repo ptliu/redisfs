@@ -7,41 +7,12 @@
 #include <sw/redis++/redis_cluster.h>
 
 #include "redisfs/redisfs.h"
+#include "redisfs/redis.h"
 #include "redisfs/utils.hpp"
 
 constexpr size_t BLOCK_SIZE = 512 * redisfs::Size<size_t>::MEGA;
 
 namespace redisfs {
-
-    namespace redis {
-
-        using namespace sw::redis;
-
-        /**
-         * @brief Store that redirects everything to a Redis cluster.
-         * 
-         */
-        class RedisClusterStore : public KVStore {
-
-            private:
-            redis::RedisCluster cluster;
-
-            public:
-            RedisClusterStore( const redis::ConnectionOptions & options ) : cluster( options ) {}
-
-            std::optional<std::string> get( const std::string_view & key ) override {
-                return cluster.get( key );
-            }
-            bool set( const std::string_view & key, const std::string_view & value ) override {
-                return cluster.set( key, value );
-            }
-            bool del( const std::string_view & key ) override {
-                return cluster.del( key ) == 1;
-            }
-
-        };
-
-    }
 
     namespace fuse {
 
@@ -53,7 +24,7 @@ namespace redisfs {
 
         //required fuse functions
 
-        static void * init( struct fuse_conn_info *conn, struct fuse_config *cfg ) {
+        static void * init( struct fuse_conn_info * conn, struct fuse_config * cfg ) {
 
             //TODO
             //(void) conn;
@@ -63,7 +34,7 @@ namespace redisfs {
             int         port = 7000;        // Optional. The default port is 6379.
             const std::string & uri = host + ":" + std::to_string( port );
 
-            const redis::ConnectionOptions connectionOptions( uri );
+            const sw::redis::ConnectionOptions connectionOptions( uri );
             std::shared_ptr<KVStore> store = std::make_shared<redis::RedisClusterStore>( connectionOptions );
 
             redis_fs_info.fs = std::make_shared<RedisFS>( store, BLOCK_SIZE );
