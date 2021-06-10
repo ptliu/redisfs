@@ -59,7 +59,7 @@ namespace redisfs {
             //(void) conn;
             //cfg->kernel_cache = 0;
 
-            std::string host = "127.0.0.1"; // Required.
+            std::string host = "tcp://127.0.0.1"; // Required.
             int         port = 7000;        // Optional. The default port is 6379.
             const std::string & uri = host + ":" + std::to_string( port );
 
