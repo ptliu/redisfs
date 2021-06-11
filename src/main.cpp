@@ -39,6 +39,12 @@ namespace redisfs {
                 return cluster.del( key ) == 1;
             }
 
+            void* getCluster() override {
+                return &cluster;
+            }
+            
+
+
         };
 
     }

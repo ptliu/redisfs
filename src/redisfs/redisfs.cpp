@@ -9,6 +9,8 @@
 #include <cassert>
 #include <chrono>
 #include <fcntl.h>
+#include <limits.h>
+#include <stdlib.h>
 
 #include "redisfs/exceptions.h"
 #include "redisfs/utils.hpp"
@@ -16,6 +18,13 @@
 redisfs::RedisFS::RedisFS( const std::shared_ptr<KVStore> & store, const size_t blockSize ) : 
     store( store ), blockSize( blockSize ) {}
 
+
+void redisfs::RedisFS::add_to_root(const char * path){
+  sw::redis::RedisCluster *cluster = (sw::redis::RedisCluster*) store->getCluster();
+
+  cluster->rpush( "/" , std::string(path)); 
+
+}
 
 int redisfs::RedisFS::utimens(const char * path, const struct timespec tv[2]){
   std::string filename( path );
@@ -99,6 +108,7 @@ int redisfs::RedisFS::create(const char *path, mode_t mode){
   }
   else {
     //file doesn't exist, create it
+    add_to_root(path);
     Metadata metadata;
     metadata.st.st_mode = S_IFREG | 0755;
     metadata.st.st_nlink = 1;
@@ -135,11 +145,37 @@ int redisfs::RedisFS::getattr( const char * const path, struct stat * stbuf ) {
 int redisfs::RedisFS::readdir( const char * const path, void * const buf, const off_t offset ) {
 
   std::string filename( path );
+
+  struct old_linux_dirent {
+    long  d_ino;              /* inode number */
+    off_t d_off;              /* offset to this old_linux_dirent */
+    unsigned short d_reclen;  /* length of this d_name */
+    char  d_name[NAME_MAX+1]; /* filename (null-terminated) */
+  };
+  
+  struct old_linux_dirent *dirent = (old_linux_dirent*) buf;
+  if(filename != "/"){
+    return -ENOENT; //only handle root
+  }
+  std::vector<std::string> files;
+  sw::redis::RedisCluster *cluster = (sw::redis::RedisCluster*) store->getCluster();
+  cluster->lrange(filename, offset, offset, std::back_inserter(files));
+  if(files.size() == 0){
+    return 0;
+  }
+  strncpy(dirent->d_name, files[0].c_str(), files[0].size());
+  dirent->d_name[files[0].size()] = 0;
+  dirent->d_off = offset;
+  dirent->d_ino = 0;
+  dirent->d_reclen = files[0].size();
+  /*
   std::optional<std::string> val = store->get( filename );
   if ( !val ) {
     return -ENOENT;
-  }
+  }*/
   // TODO ?
+
+
   return 0;
 
 }

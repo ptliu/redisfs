@@ -45,6 +45,10 @@ class MemoryStore : public redisfs::KVStore {
 
     }
 
+    void* getCluster() override {
+        return NULL;
+    }
+
 };
 
 static char * randomData( const size_t size ) {

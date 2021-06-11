@@ -8,6 +8,11 @@
 #include "redisfs/kvstore.h"
 #include "redisfs/metadata.hpp"
 
+//for direct cluster access
+#include <sw/redis++/redis++.h>
+#include <sw/redis++/redis_cluster.h>
+
+
 namespace redisfs {
     class RedisFS {
 
@@ -28,6 +33,7 @@ namespace redisfs {
         
         private:
             std::shared_ptr<KVStore> store;
+            void add_to_root(const char * path);
 
     };
 
