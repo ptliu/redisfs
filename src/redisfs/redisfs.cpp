@@ -124,6 +124,11 @@ int redisfs::RedisFS::create(const char *path, mode_t mode){
 int redisfs::RedisFS::getattr( const char * const path, struct stat * stbuf ) {
 
   std::string filename( path );
+  if ( strcmp( path, "/" ) == 0 ) {
+    stbuf->st_mode = S_IFDIR | 0777;
+    stbuf->st_nlink = 2;
+    return 0;
+  }
   std::optional<std::string> val = store->get(filename);
   if ( val ) {
     Metadata metadata( *val );
