@@ -69,9 +69,9 @@ int redisfs::RedisFS::create(const char *path, mode_t mode){
     Metadata metadata;
     metadata.st.st_mode = S_IFREG | 0755;
     metadata.st.st_nlink = 1;
-    std::string serial_metadata;
-    metadata.serialize(serial_metadata);
-    store->set(filename, serial_metadata);
+    //std::string serial_metadata;
+    //metadata.serialize(serial_metadata);
+    store->set(filename, metadata.serialize());
     //TODO: populate the metadata
   }
 }
