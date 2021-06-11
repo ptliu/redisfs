@@ -72,6 +72,11 @@ namespace redisfs {
             
         }
 
+        static int create(const char * path, mode_t mode, struct fuse_file_info *){
+            return redis_fs_info.fs->create(path, mode);
+        }
+
+
         static int getattr( const char * path, struct stat * stbuf,
                             struct fuse_file_info * fi ) {
 
@@ -124,6 +129,7 @@ namespace redisfs {
             .release = release,
             .readdir = readdir,
             .init = init,
+            .create = create,
         };
 
     }
