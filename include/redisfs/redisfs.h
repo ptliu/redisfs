@@ -18,7 +18,7 @@ namespace redisfs {
 
             int open( const char * path );
             int release( const char * path );
-
+            int create(const char *path, mode_t mode);
             int getattr( const char * const path, struct stat * stbuf );
             int readdir( const char * const path, void * const buf, const off_t offset );
             int read( const char * const path, char * const buf, const size_t size, const off_t offset );

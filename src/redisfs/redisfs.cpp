@@ -58,6 +58,22 @@ static int test_getattr(const char *path, struct stat *stbuf)
 }
 */
 
+int redisfs::RedisFS::create(const char *path, mode_t mode){
+  std::string filename( path );
+  std::optional<std::string> val = store->get(filename);
+  if ( val ) {
+    return -EEXIST;
+  }
+  else {
+    //file doesn't exist, create it
+    Metadata metadata;
+    std::string serial_metadata;
+    metadata.serialize(serial_metadata);
+    store->set(filename, serial_metadata);
+    //TODO: populate the metadata
+  }
+}
+
 int redisfs::RedisFS::getattr( const char * const path, struct stat * stbuf ) {
 
   std::string filename( path );
@@ -86,7 +102,6 @@ int redisfs::RedisFS::readdir( const char * const path, void * const buf, const 
   if ( !val ) {
     return -ENOENT;
   }
-  
   // TODO ?
   return 0;
 
