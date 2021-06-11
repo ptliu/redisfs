@@ -70,8 +70,8 @@ int redisfs::RedisFS::create(const char *path, mode_t mode){
     metadata.st.st_mode = S_IFREG | 0755;
     metadata.st.st_nlink = 1;
     //std::string serial_metadata;
-    //metadata.serialize(serial_metadata);
-    //store->set(filename, metadata.serialize());
+    //metadata.serialize();
+    store->set(filename, metadata.serialize());
     //TODO: populate the metadata
     return 0;
   }
@@ -89,7 +89,7 @@ int redisfs::RedisFS::getattr( const char * const path, struct stat * stbuf ) {
   } else {
     memset( stbuf, 0, sizeof( struct stat ) );
     if ( strcmp( path, "/" ) == 0 ) {
-      stbuf->st_mode = S_IFDIR | 0755;
+      stbuf->st_mode = S_IFDIR | 0777;
       stbuf->st_nlink = 2;
       return 0;
     } else {
