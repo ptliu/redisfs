@@ -76,6 +76,10 @@ namespace redisfs {
             return redis_fs_info.fs->create(path, mode);
         }
 
+        static int access(const char *path, int mode) {
+            return redis_fs_info.fs->access(path, mode);
+        }
+
 
         static int getattr( const char * path, struct stat * stbuf,
                             struct fuse_file_info * fi ) {
@@ -121,6 +125,11 @@ namespace redisfs {
 
         }
 
+        int utimens(const char * path , const struct timespec tv[2], struct fuse_file_info *fi){
+            return redis_fs_info.fs->utimens(path, tv);
+        }
+
+
         static const struct fuse_operations test_oper {
             .getattr = getattr,
             .open = open,
@@ -129,7 +138,9 @@ namespace redisfs {
             .release = release,
             .readdir = readdir,
             .init = init,
+            .access = access,
             .create = create,
+            .utimens = utimens,
         };
 
     }

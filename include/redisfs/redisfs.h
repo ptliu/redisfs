@@ -16,6 +16,8 @@ namespace redisfs {
 
             const size_t blockSize;
 
+            int utimens(const char * path, const struct timespec tv[2]);
+            int access(const char * path, int mode);
             int open( const char * path );
             int release( const char * path );
             int create(const char *path, mode_t mode);
