@@ -71,9 +71,11 @@ int redisfs::RedisFS::create(const char *path, mode_t mode){
     metadata.st.st_nlink = 1;
     //std::string serial_metadata;
     //metadata.serialize(serial_metadata);
-    store->set(filename, metadata.serialize());
+    //store->set(filename, metadata.serialize());
     //TODO: populate the metadata
+    return 0;
   }
+  return 0;
 }
 
 int redisfs::RedisFS::getattr( const char * const path, struct stat * stbuf ) {
