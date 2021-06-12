@@ -18,7 +18,7 @@ bool redisfs::redis::RedisStore::del( const std::string_view & key ) {
     return redis.del( key ) == 1;
 }
 void redisfs::redis::RedisStore::clear() {
-    redis.flushdb();
+    redis.flushall();
 }
 std::optional<std::string> redisfs::redis::RedisStore::get( const std::string_view & key, const size_t idx ) {
     std::vector<std::string> values;
@@ -62,7 +62,7 @@ void redisfs::redis::RedisClusterStore::clear() {
             std::string uri = "tcp://" + m[1].str();
             std::cerr << "Sending reset to " << uri << std::endl;
             
-            sw::redis::Redis( sw::redis::ConnectionOptions( uri ) ).flushdb();
+            sw::redis::Redis( sw::redis::ConnectionOptions( uri ) ).flushall();
         }
 
     }
