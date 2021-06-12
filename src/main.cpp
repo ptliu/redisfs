@@ -35,7 +35,8 @@ namespace redisfs {
             const std::string & uri = host + ":" + std::to_string( port );
 
             const sw::redis::ConnectionOptions connectionOptions( uri );
-            std::shared_ptr<KVStore> store = std::make_shared<redis::RedisClusterStore>( connectionOptions );
+            //std::shared_ptr<KVStore> store = std::make_shared<redis::RedisClusterStore>( connectionOptions );
+            std::shared_ptr<KVStore> store = std::make_shared<MemoryStore>();
 
             redis_fs_info.fs = std::make_shared<RedisFS>( store, BLOCK_SIZE );
 

@@ -59,12 +59,17 @@ int redisfs::RedisFS::open( const char * path ) {
   std::string filename( path );
   std::optional<std::string> val = store->get( filename );
   if ( !val ) {
+    /*
     //create the file as it doesn't exist
     Metadata metadata;
     metadata.st.st_mode = 0755;
     metadata.st.st_nlink = 1;
 
     store->set( filename, metadata.serialize() );
+    */
+
+    //create should be filtered by kernel
+    return -ENOENT;
   }
 
   return 0;
@@ -123,6 +128,19 @@ int redisfs::RedisFS::getattr( const char * const path, struct stat * stbuf ) {
     stbuf->st_nlink = 2;
     return 0;
   }
+
+  if ( strcmp( path, "." ) == 0 ) {
+    stbuf->st_mode = S_IFDIR | 0777;
+    stbuf->st_nlink = 2;
+    return 0;
+  }
+
+  if ( strcmp( path, ".." ) == 0 ) {
+    stbuf->st_mode = S_IFDIR | 0777;
+    stbuf->st_nlink = 2;
+    return 0;
+  }
+
   const std::optional<std::string> val = store->get( filename );
   if ( val ) {
     Metadata metadata( *val );
