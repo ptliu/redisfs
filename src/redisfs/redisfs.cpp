@@ -25,7 +25,7 @@ void redisfs::RedisFS::add_to_root( const char * path ){
 
 }
 
-int redisfs::RedisFS::utimens(const char * path, const struct timespec tv[2]){
+int redisfs::RedisFS::utimens( const char * path, const struct timespec tv[2] ){
   std::string filename( path );
   std::optional<std::string> val = store->get( filename );
   if ( !val ) {
@@ -33,23 +33,27 @@ int redisfs::RedisFS::utimens(const char * path, const struct timespec tv[2]){
   }
 
   Metadata metadata( *val );
-  //ignores time passed in and just sets to current time
+
+  // ignores time passed in and just sets to current time
   std::chrono::time_point<std::chrono::system_clock> time = std::chrono::system_clock::now();
-  if(tv == NULL){
-    metadata.st.st_ctim.tv_nsec = std::chrono::duration_cast<std::chrono::nanoseconds>( time.time_since_epoch() ).count() / 1000000000;
-    metadata.st.st_ctim.tv_sec = std::chrono::duration_cast<std::chrono::seconds>( time.time_since_epoch() ).count();
-    metadata.st.st_atim.tv_nsec = std::chrono::duration_cast<std::chrono::nanoseconds>( time.time_since_epoch() ).count() / 1000000000;
-    metadata.st.st_atim.tv_sec = std::chrono::duration_cast<std::chrono::seconds>( time.time_since_epoch() ).count();
-    metadata.st.st_mtim.tv_nsec = std::chrono::duration_cast<std::chrono::nanoseconds>( time.time_since_epoch() ).count() / 1000000000;
-    metadata.st.st_mtim.tv_sec = std::chrono::duration_cast<std::chrono::seconds>( time.time_since_epoch() ).count();
-    return 0;
+  long nowNS = std::chrono::duration_cast<std::chrono::nanoseconds>( time.time_since_epoch() ).count() / 1000000000;
+  time_t nowS = std::chrono::duration_cast<std::chrono::seconds>( time.time_since_epoch() ).count();
+
+  if( tv == NULL ){
+    metadata.st.st_ctim.tv_nsec = nowNS;
+    metadata.st.st_ctim.tv_sec = nowS;
+    metadata.st.st_atim.tv_nsec = nowNS;
+    metadata.st.st_atim.tv_sec = nowS;
+    metadata.st.st_mtim.tv_nsec = nowNS;
+    metadata.st.st_mtim.tv_sec = nowS;
+  } else {
+    metadata.st.st_atim.tv_nsec = tv[0].tv_nsec;
+    metadata.st.st_atim.tv_sec = tv[0].tv_sec;
+    metadata.st.st_mtim.tv_nsec = tv[1].tv_nsec;
+    metadata.st.st_mtim.tv_sec = tv[1].tv_sec;
+    metadata.st.st_ctim.tv_nsec = nowNS;
+    metadata.st.st_ctim.tv_sec = nowS;
   }
-  metadata.st.st_atim.tv_nsec = tv[0].tv_nsec;
-  metadata.st.st_atim.tv_sec = tv[0].tv_sec;
-  metadata.st.st_mtim.tv_nsec = tv[1].tv_nsec;
-  metadata.st.st_mtim.tv_sec = tv[1].tv_sec;
-  metadata.st.st_ctim.tv_nsec = std::chrono::duration_cast<std::chrono::nanoseconds>( time.time_since_epoch() ).count() / 1000000000;
-  metadata.st.st_ctim.tv_sec = std::chrono::duration_cast<std::chrono::seconds>( time.time_since_epoch() ).count();
   return 0;
 }
 
