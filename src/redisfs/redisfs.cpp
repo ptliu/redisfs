@@ -141,40 +141,25 @@ int redisfs::RedisFS::getattr( const char * const path, struct stat * stbuf ) {
   
 }
 
-int redisfs::RedisFS::readdir( const char * const path, void * const buf, const off_t offset ) {
+int redisfs::RedisFS::readdir( const char * const path, void * const buf, fuse_fill_dir_t filler, const off_t offset ) {
 
   std::string filename( path );
+  //if( filename != "/" ){
+    //return -ENOENT; //only handle root
+  //}
+  off_t idx = 0;
 
-  struct old_linux_dirent {
-    long  d_ino;              /* inode number */
-    off_t d_off;              /* offset to this old_linux_dirent */
-    unsigned short d_reclen;  /* length of this d_name */
-    char  d_name[NAME_MAX+1]; /* filename (null-terminated) */
-  };
-  
-  struct old_linux_dirent * dirent = ( old_linux_dirent * ) buf;
-  if( filename != "/" ){
-    return -ENOENT; //only handle root
+  while(true){
+    const std::optional<std::string> val = store->get( filename, idx );
+    if(!val){
+      break;
+    }
+    std::string fileval = *val;
+    if (filler(buf, fileval.c_str(), NULL, 0, FUSE_FILL_DIR_PLUS) != 0){
+      return -ENOMEM;
+    }
+    idx++;
   }
-
-  const std::optional<std::string> val = store->get( filename, offset );
-  if ( !val ) {
-    return 0;
-  }
-
-  const std::string & entry = *val;
-  strncpy( dirent->d_name, entry.c_str(), entry.size() );
-  dirent->d_name[entry.size()] = 0;
-  dirent->d_off = offset;
-  dirent->d_ino = 0;
-  dirent->d_reclen = 1;//entry.size();
-  /*
-  std::optional<std::string> val = store->get( filename );
-  if ( !val ) {
-    return -ENOENT;
-  }*/
-  // TODO ?
-
 
   return 0;
 

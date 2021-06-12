@@ -65,7 +65,7 @@ namespace redisfs {
             ( void ) offset;
             ( void ) fi;
 
-            return redis_fs_info.fs->readdir( path, buf, offset );
+            return redis_fs_info.fs->readdir( path, buf, filler, offset );
 
         }
 
