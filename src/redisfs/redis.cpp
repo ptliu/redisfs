@@ -53,15 +53,17 @@ void redisfs::redis::RedisClusterStore::clear() {
     std::string line;
     while ( std::getline( ss, line, '\n' ) ) {
 
-        static const std::regex re( "\\d{1,3}(?:\\.\\d{1,3}){3}:\\d+" );
+        static const std::regex re( "(\\d{1,3}(?:\\.\\d{1,3}){3}:\\d+)@\\d+ \\S*(slave|master)\\S*" );
         std::smatch m;
         if ( !std::regex_search( line, m, re ) ) {
             throw std::runtime_error( "Line did not contain a node address." );
         }
-        std::string uri = "tcp://" + m.str();
-        std::cerr << "Sending reset to " << uri << std::endl;
-        
-        sw::redis::Redis( sw::redis::ConnectionOptions( uri ) ).flushdb();
+        if ( m[2] == "master" ) { // Node is a master
+            std::string uri = "tcp://" + m[1].str();
+            std::cerr << "Sending reset to " << uri << std::endl;
+            
+            sw::redis::Redis( sw::redis::ConnectionOptions( uri ) ).flushdb();
+        }
 
     }
 
