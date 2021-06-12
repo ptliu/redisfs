@@ -58,11 +58,11 @@ void redisfs::redis::RedisClusterStore::clear() {
         if ( !std::regex_search( line, m, re ) ) {
             throw std::runtime_error( "Line did not contain a node address." );
         }
-        std::string uri = m.str();
+        std::string uri = "tcp://" + m.str();
         std::cerr << "Sending reset to " << uri << std::endl;
         
         sw::redis::Redis( sw::redis::ConnectionOptions( uri ) ).flushdb();
-        
+
     }
 
 }
