@@ -144,9 +144,9 @@ int redisfs::RedisFS::getattr( const char * const path, struct stat * stbuf ) {
 int redisfs::RedisFS::readdir( const char * const path, void * const buf, fuse_fill_dir_t filler, const off_t offset ) {
 
   std::string filename( path );
-  if( filename != "/" ){
-    return -ENOENT; //only handle root
-  }
+  //if( filename != "/" ){
+    //return -ENOENT; //only handle root
+  //}
   off_t idx = 0;
 
   while(true){
