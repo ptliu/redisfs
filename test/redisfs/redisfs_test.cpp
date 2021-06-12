@@ -62,6 +62,7 @@ class RedisFSTest : public ::testing::Test {
     void SetUp() override {
 
         for ( auto it : baseItems ) {
+            fs.create( it.first.c_str(), 0 );
             fs.open( it.first.c_str() );
             fs.write( it.first.c_str(), it.second.first, it.second.second, 0 );
         }
