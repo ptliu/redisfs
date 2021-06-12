@@ -167,7 +167,7 @@ int redisfs::RedisFS::readdir( const char * const path, void * const buf, const 
   dirent->d_name[entry.size()] = 0;
   dirent->d_off = offset;
   dirent->d_ino = 0;
-  dirent->d_reclen = entry.size();
+  dirent->d_reclen = 1;//entry.size();
   /*
   std::optional<std::string> val = store->get( filename );
   if ( !val ) {
