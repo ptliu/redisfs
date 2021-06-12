@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <chrono>
 #include <functional>
 #include <iostream>
@@ -32,19 +33,29 @@ static void randomData( std::string & buf, const size_t size ) {
     
 }
 
-static void timeFunction( std::function<void()> func, const std::string & title ) {
+static void timeFunction( std::function<void()> func, const std::string & type, const size_t size ) {
 
     Clock::duration total = Clock::duration::zero();
+    std::vector<int64_t> times;
     for ( size_t i = 0; i < RUNS; i++ ) {
 
         Clock::time_point start = Clock::now();
         func();
         Clock::time_point end = Clock::now();
-        total += end - start;
+        Clock::duration time = end - start;
+
+        total += time;
+        times.push_back( std::chrono::duration_cast<std::chrono::nanoseconds>( time ).count() );
 
     } 
-    Clock::duration average = total / RUNS;
-    std::cout << "Average time for " << title << ": " << std::chrono::duration_cast<std::chrono::nanoseconds>( average ).count() << "ns" << std::endl;
+
+    int64_t mean = std::chrono::duration_cast<std::chrono::nanoseconds>( total / RUNS ).count();
+
+    std::sort( times.begin(), times.end() );
+    int64_t median = times[times.size() / 2];
+
+    std::cerr << size << " byte " << type << ": " << mean << "ns mean, " << median << "ns median" << std::endl;
+    std::cout << type << "," << size << "," << mean << "," << median << std::endl;
 
 }
 
@@ -55,7 +66,7 @@ void testWrite( redisfs::KVStore & store ) {
         std::string key = std::to_string( size );
         std::string data;
         randomData( data, size );
-        timeFunction( [ &store, &key, &data ]() -> void { store.set( key, data ); }, key + " byte write" );
+        timeFunction( [ &store, &key, &data ]() -> void { store.set( key, data ); }, "write", size );
 
     }
 
@@ -67,7 +78,7 @@ void testRead( redisfs::KVStore & store ) {
 
         std::string key = std::to_string( size );
         std::string data;
-        timeFunction( [ &store, &key, &data ]() -> void { data = *store.get( key ); }, key + " byte read" );
+        timeFunction( [ &store, &key, &data ]() -> void { data = *store.get( key ); }, "read", size );
 
     }
 
@@ -99,6 +110,7 @@ int main( int argc, char ** argv ) {
     }
 
     store->clear();
+    std::cout << "type,size,mean,median" << std::endl;
     testWrite( *store );
     testRead( *store );
     store->clear();
