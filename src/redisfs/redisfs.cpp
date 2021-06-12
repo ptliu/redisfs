@@ -18,13 +18,6 @@
 redisfs::RedisFS::RedisFS( const std::shared_ptr<KVStore> & store, const size_t blockSize ) : 
     store( store ), blockSize( blockSize ) {}
 
-
-void redisfs::RedisFS::add_to_root( const char * path ){
-
-  store->push( "/", std::string( path ) );
-
-}
-
 int redisfs::RedisFS::utimens( const char * path, const struct timespec tv[2] ){
   std::string filename( path );
   std::optional<std::string> val = store->get( filename );

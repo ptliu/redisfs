@@ -33,7 +33,6 @@ namespace redisfs {
         
         private:
             std::shared_ptr<KVStore> store;
-            void add_to_root(const char * path);
 
     };
 
