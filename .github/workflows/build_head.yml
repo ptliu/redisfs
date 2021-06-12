@@ -51,6 +51,7 @@ jobs:
           path: |
             ./build/redisfs
             ./build/redisfs_test
+            ./build/redisfs_eval_block
 
   test:
     name: Run tests
