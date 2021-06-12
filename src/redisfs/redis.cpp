@@ -1,5 +1,7 @@
 #include "redisfs/redis.h"
 
+#include <iostream>
+#include <regex>
 #include <stdexcept>
 
 /* RedisStore */
@@ -45,7 +47,24 @@ bool redisfs::redis::RedisClusterStore::del( const std::string_view & key ) {
     return cluster.del( key ) == 1;
 }
 void redisfs::redis::RedisClusterStore::clear() {
-    throw std::logic_error( "Not implemented" ); // TODO ?
+
+    const std::string clusterString = cluster.redis( "0", false ).command<std::string>( "cluster", "nodes" );
+    std::stringstream ss( clusterString );
+    std::string line;
+    while ( std::getline( ss, line, '\n' ) ) {
+
+        static const std::regex re( "\\d{1,3}(?:\\.\\d{1,3}){3}:\\d+" );
+        std::smatch m;
+        if ( !std::regex_search( line, m, re ) ) {
+            throw std::runtime_error( "Line did not contain a node address." );
+        }
+        std::string uri = m.str();
+        std::cerr << "Sending reset to " << uri << std::endl;
+        
+        sw::redis::Redis( sw::redis::ConnectionOptions( uri ) ).flushdb();
+        
+    }
+
 }
 std::optional<std::string> redisfs::redis::RedisClusterStore::get( const std::string_view & key, const size_t idx ) {
     std::vector<std::string> values;
