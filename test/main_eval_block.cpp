@@ -83,7 +83,7 @@ int main( int argc, char ** argv ) {
     std::shared_ptr<redisfs::KVStore> store;
     if ( storeType == "memory" ) {
         store = std::make_shared<redisfs::MemoryStore>();
-        const std::string uri( argv[1] );
+        const std::string uri( argv[2] );
     } else if ( argc < 3 ) {
         throw std::runtime_error( "Must provide an URI" );
     } else {
