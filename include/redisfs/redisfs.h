@@ -1,5 +1,6 @@
 #pragma once
 
+#define FUSE_USE_VERSION 31
 #include <memory>
 #include <string>
 
@@ -12,6 +13,7 @@
 #include <sw/redis++/redis++.h>
 #include <sw/redis++/redis_cluster.h>
 
+#include <fuse3/fuse.h>
 
 namespace redisfs {
     class RedisFS {
@@ -27,7 +29,7 @@ namespace redisfs {
             int release( const char * path );
             int create( const char * path, mode_t mode );
             int getattr( const char * const path, struct stat * stbuf );
-            int readdir( const char * const path, void * const buf, const off_t offset );
+            int readdir( const char * const path, void * const buf, fuse_fill_dir_t filler, const off_t offset );
             int read( const char * const path, char * const buf, const size_t size, const off_t offset );
             int write( const char * const path, const char * const buf, const size_t size, const off_t offset );
         
