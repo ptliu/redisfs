@@ -9,72 +9,10 @@
 #include "redisfs/utils.hpp"
 
 using Size = redisfs::Size<size_t>;
+using Store = redisfs::MemoryStore;
 
 constexpr size_t BLOCK_SIZE = 64 * Size::KILO;
 constexpr size_t SEED = 4201337;
-
-class MemoryStore : public redisfs::KVStore {
-
-    public:
-    std::unordered_map<std::string, std::string> map; // Public since its for testing anyway
-    std::unordered_map<std::string, std::vector<std::string>> listMap;
-
-    std::optional<std::string> get( const std::string_view & key ) override {
-        
-        std::string k( key );
-        auto it = map.find( k );
-        if ( it == map.end() ) {
-            return std::nullopt;
-        } else {
-            return it->second;
-        }
-
-    }
-
-    bool set( const std::string_view & key, const std::string_view & value ) override {
-
-        std::string k( key ), v( value );
-        map[k] = v;
-        return true;
-    
-    }
-
-    bool del( const std::string_view & key ) override {
-                
-        std::string k( key );
-        return map.erase( k ) == 1;
-
-    }
-
-    void clear() {
-
-        map.clear();
-        listMap.clear();
-
-    }
-
-    std::optional<std::string> get( const std::string_view & key, const size_t idx ) override {
-
-        std::string k( key );
-        auto it = listMap.find( k );
-        if ( it == listMap.end() || it->second.size() <= idx ) {
-            return std::nullopt;
-        } else  {
-            return it->second[idx];
-        }
-
-    }
-    
-    size_t push( const std::string_view & key, const std::string_view & value ) override {
-
-        std::string k( key ), v( value );
-        std::vector<std::string> & vec = listMap[k];
-        vec.push_back( v );
-        return vec.size();
-
-    }
-
-};
 
 static char * randomData( const size_t size ) {
 
@@ -119,7 +57,7 @@ class RedisFSTest : public ::testing::Test {
     const std::unordered_map<std::string, std::pair<char *, size_t>> baseItems;
     redisfs::RedisFS fs;
 
-    RedisFSTest() : baseItems( makeItems() ), fs( std::make_shared<MemoryStore>(), BLOCK_SIZE ) {}
+    RedisFSTest() : baseItems( makeItems() ), fs( std::make_shared<Store>(), BLOCK_SIZE ) {}
 
     void SetUp() override {
 

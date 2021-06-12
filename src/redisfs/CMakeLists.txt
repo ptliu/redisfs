@@ -3,4 +3,5 @@ target_sources(redisfs_lib
         redisfs.cpp
         exceptions.cpp
         redis.cpp
+        kvstore.cpp
 )
