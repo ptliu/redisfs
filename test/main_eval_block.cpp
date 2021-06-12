@@ -10,7 +10,7 @@
 #include "redisfs/utils.hpp"
 
 constexpr size_t MIN_SIZE = redisfs::Size<size_t>::KIBI;
-constexpr size_t MAX_SIZE = redisfs::Size<size_t>::MEBI * 256;
+constexpr size_t MAX_SIZE = redisfs::Size<size_t>::MEBI * 64;
 constexpr size_t RUNS = 100;
 constexpr size_t SEED = 4201337;
 
