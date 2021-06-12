@@ -8,6 +8,11 @@
 #include "redisfs/kvstore.h"
 #include "redisfs/metadata.hpp"
 
+//for direct cluster access
+#include <sw/redis++/redis++.h>
+#include <sw/redis++/redis_cluster.h>
+
+
 namespace redisfs {
     class RedisFS {
 
@@ -16,9 +21,11 @@ namespace redisfs {
 
             const size_t blockSize;
 
+            int utimens( const char * path, const struct timespec tv[2] );
+            int access( const char * path, int mode );
             int open( const char * path );
             int release( const char * path );
-
+            int create( const char * path, mode_t mode );
             int getattr( const char * const path, struct stat * stbuf );
             int readdir( const char * const path, void * const buf, const off_t offset );
             int read( const char * const path, char * const buf, const size_t size, const off_t offset );
@@ -26,6 +33,7 @@ namespace redisfs {
         
         private:
             std::shared_ptr<KVStore> store;
+            void add_to_root(const char * path);
 
     };
 

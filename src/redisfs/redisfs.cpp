@@ -7,14 +7,55 @@
 #include <cerrno>
 #include <cstddef>
 #include <cassert>
-
+#include <chrono>
 #include <fcntl.h>
+#include <limits.h>
+#include <stdlib.h>
 
 #include "redisfs/exceptions.h"
 #include "redisfs/utils.hpp"
 
 redisfs::RedisFS::RedisFS( const std::shared_ptr<KVStore> & store, const size_t blockSize ) : 
     store( store ), blockSize( blockSize ) {}
+
+
+void redisfs::RedisFS::add_to_root( const char * path ){
+
+  store->push( "/", std::string( path ) );
+
+}
+
+int redisfs::RedisFS::utimens(const char * path, const struct timespec tv[2]){
+  std::string filename( path );
+  std::optional<std::string> val = store->get( filename );
+  if ( !val ) {
+    return -ENOENT;
+  }
+
+  Metadata metadata( *val );
+  //ignores time passed in and just sets to current time
+  std::chrono::time_point<std::chrono::system_clock> time = std::chrono::system_clock::now();
+  if(tv == NULL){
+    metadata.st.st_ctim.tv_nsec = std::chrono::duration_cast<std::chrono::nanoseconds>( time.time_since_epoch() ).count() / 1000000000;
+    metadata.st.st_ctim.tv_sec = std::chrono::duration_cast<std::chrono::seconds>( time.time_since_epoch() ).count();
+    metadata.st.st_atim.tv_nsec = std::chrono::duration_cast<std::chrono::nanoseconds>( time.time_since_epoch() ).count() / 1000000000;
+    metadata.st.st_atim.tv_sec = std::chrono::duration_cast<std::chrono::seconds>( time.time_since_epoch() ).count();
+    metadata.st.st_mtim.tv_nsec = std::chrono::duration_cast<std::chrono::nanoseconds>( time.time_since_epoch() ).count() / 1000000000;
+    metadata.st.st_mtim.tv_sec = std::chrono::duration_cast<std::chrono::seconds>( time.time_since_epoch() ).count();
+    return 0;
+  }
+  metadata.st.st_atim.tv_nsec = tv[0].tv_nsec;
+  metadata.st.st_atim.tv_sec = tv[0].tv_sec;
+  metadata.st.st_mtim.tv_nsec = tv[1].tv_nsec;
+  metadata.st.st_mtim.tv_sec = tv[1].tv_sec;
+  metadata.st.st_ctim.tv_nsec = std::chrono::duration_cast<std::chrono::nanoseconds>( time.time_since_epoch() ).count() / 1000000000;
+  metadata.st.st_ctim.tv_sec = std::chrono::duration_cast<std::chrono::seconds>( time.time_since_epoch() ).count();
+  return 0;
+}
+
+int redisfs::RedisFS::access(const char * path, int mode){
+  return 0; //no permissions enforced
+}
 
 int redisfs::RedisFS::open( const char * path ) {
 
@@ -58,10 +99,34 @@ static int test_getattr(const char *path, struct stat *stbuf)
 }
 */
 
+int redisfs::RedisFS::create( const char * path, mode_t mode ){
+
+  std::string filename( path );
+  std::optional<std::string> val = store->get( filename );
+  if ( val ) {
+    return -EEXIST;
+  } else {
+    //file doesn't exist, create it
+    store->push( "/", filename );
+    Metadata metadata;
+    metadata.st.st_mode = S_IFREG | 0755;
+    metadata.st.st_nlink = 1;
+    store->set( filename, metadata.serialize() );
+    //TODO: populate the metadata
+    return 0;
+  }
+
+}
+
 int redisfs::RedisFS::getattr( const char * const path, struct stat * stbuf ) {
 
   std::string filename( path );
-  std::optional<std::string> val = store->get(filename);
+  if ( strcmp( path, "/" ) == 0 ) {
+    stbuf->st_mode = S_IFDIR | 0777;
+    stbuf->st_nlink = 2;
+    return 0;
+  }
+  const std::optional<std::string> val = store->get( filename );
   if ( val ) {
     Metadata metadata( *val );
     *stbuf = metadata.st;
@@ -69,7 +134,7 @@ int redisfs::RedisFS::getattr( const char * const path, struct stat * stbuf ) {
   } else {
     memset( stbuf, 0, sizeof( struct stat ) );
     if ( strcmp( path, "/" ) == 0 ) {
-      stbuf->st_mode = S_IFDIR | 0755;
+      stbuf->st_mode = S_IFDIR | 0777;
       stbuf->st_nlink = 2;
       return 0;
     } else {
@@ -82,12 +147,38 @@ int redisfs::RedisFS::getattr( const char * const path, struct stat * stbuf ) {
 int redisfs::RedisFS::readdir( const char * const path, void * const buf, const off_t offset ) {
 
   std::string filename( path );
+
+  struct old_linux_dirent {
+    long  d_ino;              /* inode number */
+    off_t d_off;              /* offset to this old_linux_dirent */
+    unsigned short d_reclen;  /* length of this d_name */
+    char  d_name[NAME_MAX+1]; /* filename (null-terminated) */
+  };
+  
+  struct old_linux_dirent * dirent = ( old_linux_dirent * ) buf;
+  if( filename != "/" ){
+    return -ENOENT; //only handle root
+  }
+
+  const std::optional<std::string> val = store->get( filename, offset );
+  if ( !val ) {
+    return 0;
+  }
+
+  const std::string & entry = *val;
+  strncpy( dirent->d_name, entry.c_str(), entry.size() );
+  dirent->d_name[entry.size()] = 0;
+  dirent->d_off = offset;
+  dirent->d_ino = 0;
+  dirent->d_reclen = entry.size();
+  /*
   std::optional<std::string> val = store->get( filename );
   if ( !val ) {
     return -ENOENT;
-  }
-  
+  }*/
   // TODO ?
+
+
   return 0;
 
 }

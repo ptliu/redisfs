@@ -25,6 +25,9 @@ namespace redisfs {
             bool del( const std::string_view & key ) override;
             void clear() override;
 
+            std::optional<std::string> get( const std::string_view & key, const size_t idx ) override;
+            size_t push( const std::string_view & key, const std::string_view & value ) override;
+
         };
 
         /**
@@ -42,6 +45,9 @@ namespace redisfs {
             bool set( const std::string_view & key, const std::string_view & value ) override;
             bool del( const std::string_view & key ) override;
             void clear() override;
+
+            std::optional<std::string> get( const std::string_view & key, const size_t idx ) override;
+            size_t push( const std::string_view & key, const std::string_view & value ) override;
 
         };
 

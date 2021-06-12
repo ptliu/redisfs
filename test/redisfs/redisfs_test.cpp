@@ -17,6 +17,7 @@ class MemoryStore : public redisfs::KVStore {
 
     public:
     std::unordered_map<std::string, std::string> map; // Public since its for testing anyway
+    std::unordered_map<std::string, std::vector<std::string>> listMap;
 
     std::optional<std::string> get( const std::string_view & key ) override {
         
@@ -48,6 +49,28 @@ class MemoryStore : public redisfs::KVStore {
     void clear() {
 
         map.clear();
+        listMap.clear();
+
+    }
+
+    std::optional<std::string> get( const std::string_view & key, const size_t idx ) override {
+
+        std::string k( key );
+        auto it = listMap.find( k );
+        if ( it == listMap.end() || it->second.size() <= idx ) {
+            return std::nullopt;
+        } else  {
+            return it->second[idx];
+        }
+
+    }
+    
+    size_t push( const std::string_view & key, const std::string_view & value ) override {
+
+        std::string k( key ), v( value );
+        std::vector<std::string> & vec = listMap[k];
+        vec.push_back( v );
+        return vec.size();
 
     }
 

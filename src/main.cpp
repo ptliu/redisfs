@@ -30,7 +30,7 @@ namespace redisfs {
             //(void) conn;
             //cfg->kernel_cache = 0;
 
-            std::string host = "127.0.0.1"; // Required.
+            std::string host = "tcp://127.0.0.1"; // Required.
             int         port = 7000;        // Optional. The default port is 6379.
             const std::string & uri = host + ":" + std::to_string( port );
 
@@ -42,6 +42,15 @@ namespace redisfs {
             return ( void * ) &redis_fs_info;
             
         }
+
+        static int create(const char * path, mode_t mode, struct fuse_file_info *){
+            return redis_fs_info.fs->create(path, mode);
+        }
+
+        static int access(const char *path, int mode) {
+            return redis_fs_info.fs->access(path, mode);
+        }
+
 
         static int getattr( const char * path, struct stat * stbuf,
                             struct fuse_file_info * fi ) {
@@ -87,6 +96,11 @@ namespace redisfs {
 
         }
 
+        int utimens(const char * path , const struct timespec tv[2], struct fuse_file_info *fi){
+            return redis_fs_info.fs->utimens(path, tv);
+        }
+
+
         static const struct fuse_operations test_oper {
             .getattr = getattr,
             .open = open,
@@ -95,6 +109,9 @@ namespace redisfs {
             .release = release,
             .readdir = readdir,
             .init = init,
+            .access = access,
+            .create = create,
+            .utimens = utimens,
         };
 
     }
